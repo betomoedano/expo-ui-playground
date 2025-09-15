@@ -2,6 +2,12 @@
 
 An **experimental playground** for exploring and showcasing [Expo UI](https://docs.expo.dev/ui/overview/) components with comprehensive examples and real-world implementations.
 
+## 🎥 Video Tutorial
+
+[![Expo UI Tutorial](https://img.youtube.com/vi/2wXYLWz3YEQ/0.jpg)](https://www.youtube.com/watch?v=2wXYLWz3YEQ)
+
+**[Building iOS-like UIs with Expo UI](https://www.youtube.com/watch?v=2wXYLWz3YEQ)** - A comprehensive tutorial covering Expo UI components and implementation patterns.
+
 ## 🎯 What's Inside
 
 This playground demonstrates a complete **productivity app interface** built entirely with Expo UI Swift components, featuring:
@@ -62,15 +68,34 @@ This playground demonstrates a complete **productivity app interface** built ent
 ## 📂 Project Structure
 
 ```
-components/screens/
-├── liquid-glass-example.tsx    # Main playground component
-├── settings.tsx               # Chart examples reference
-└── habit-tracker.tsx         # Additional examples
-
 app/
-├── home/                     # Home tab with playground
-├── settings.tsx             # Settings tab
-└── _layout.tsx             # Root layout with tabs
+├── _layout.tsx              # Root native tabs layout (Home, Basic, Settings)
+├── index.tsx               # Root redirect
+├── home/
+│   ├── _layout.tsx         # Home tab layout
+│   └── index.tsx           # Main playground (liquid-glass-example)
+├── basic/
+│   ├── _layout.tsx         # Basic examples layout
+│   ├── index.tsx           # Basic usage examples
+│   └── modifiers.tsx       # Modifiers examples
+└── settings.tsx            # Settings tab
+
+components/
+├── liquid-glass/           # Main playground components
+│   ├── AppContext.tsx      # React Context with use() hook
+│   ├── types.ts            # TypeScript definitions
+│   ├── ProfileSection.tsx  # Profile management
+│   ├── DashboardSection.tsx # Interactive gauges & metrics
+│   ├── TaskManagementSection.tsx # Task filtering & completion
+│   ├── ContextMenuSection.tsx # Context menus & submenus
+│   ├── DateTimeSection.tsx # Date/time pickers
+│   ├── ButtonsSection.tsx  # Button variants showcase
+│   └── SettingsSection.tsx # App settings
+└── screens/
+    ├── liquid-glass-example.tsx # Main playground screen
+    ├── basic-usage-video.tsx    # Basic usage examples
+    ├── basic-usage.tsx         # Alternative basic examples
+    └── habit-tracker.tsx       # Additional demo screen
 ```
 
 ## 🎮 Interactive Features
