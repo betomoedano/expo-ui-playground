@@ -1,4 +1,3 @@
-import { foregroundColor, frame } from "@expo/ui/build/swift-ui/modifiers";
 import {
   Button,
   Gauge,
@@ -8,6 +7,7 @@ import {
   Text,
   VStack,
 } from "@expo/ui/swift-ui";
+import { foregroundStyle, frame } from "@expo/ui/swift-ui/modifiers";
 import React, { use } from "react";
 import { AppContext } from "./AppContext";
 import { AppState } from "./types";
@@ -48,7 +48,7 @@ export function DashboardSection() {
             />
             <VStack spacing={4} alignment="leading">
               <Text size={14}>Completion Rate</Text>
-              <Text size={12} modifiers={[foregroundColor("gray")]}>
+              <Text size={12} modifiers={[foregroundStyle("gray")]}>
                 {`${completedTasks} of ${totalTasks} completed`}
               </Text>
             </VStack>
@@ -106,7 +106,7 @@ export function DashboardSection() {
             <Text size={14}>Linear Gauge Types</Text>
 
             <VStack spacing={4}>
-              <Text size={12} modifiers={[foregroundColor("gray")]}>
+              <Text size={12} modifiers={[foregroundStyle("gray")]}>
                 Default Linear
               </Text>
               <Gauge
@@ -117,7 +117,7 @@ export function DashboardSection() {
             </VStack>
 
             <VStack spacing={4}>
-              <Text size={12} modifiers={[foregroundColor("gray")]}>
+              <Text size={12} modifiers={[foregroundStyle("gray")]}>
                 Linear
               </Text>
               <Gauge
@@ -128,7 +128,7 @@ export function DashboardSection() {
             </VStack>
 
             <VStack spacing={4}>
-              <Text size={12} modifiers={[foregroundColor("gray")]}>
+              <Text size={12} modifiers={[foregroundStyle("gray")]}>
                 Linear Capacity
               </Text>
               <Gauge
@@ -139,7 +139,7 @@ export function DashboardSection() {
             </VStack>
 
             <VStack spacing={4}>
-              <Text size={12} modifiers={[foregroundColor("gray")]}>
+              <Text size={12} modifiers={[foregroundStyle("gray")]}>
                 Gradient Linear
               </Text>
               <Gauge
@@ -158,7 +158,7 @@ export function DashboardSection() {
           <VStack spacing={8}>
             <HStack spacing={12} alignment="center">
               <Text size={14}>Productivity Score:</Text>
-              <Text size={14} modifiers={[foregroundColor("blue")]}>
+              <Text size={14} modifiers={[foregroundStyle("blue")]}>
                 {`${Math.round(productivityScore * 100)}%`}
               </Text>
             </HStack>
@@ -171,7 +171,7 @@ export function DashboardSection() {
           <VStack spacing={8}>
             <HStack spacing={12} alignment="center">
               <Text size={14}>Focus Level:</Text>
-              <Text size={14} modifiers={[foregroundColor("purple")]}>
+              <Text size={14} modifiers={[foregroundStyle("purple")]}>
                 {`${Math.round(focusLevel * 100)}%`}
               </Text>
             </HStack>

@@ -1,4 +1,3 @@
-import { foregroundColor } from "@expo/ui/build/swift-ui/modifiers";
 import {
   ContentUnavailableView,
   HStack,
@@ -8,6 +7,7 @@ import {
   Text,
   VStack,
 } from "@expo/ui/swift-ui";
+import { foregroundStyle } from "@expo/ui/swift-ui/modifiers";
 import React, { use } from "react";
 import { AppContext } from "./AppContext";
 import { AppState } from "./types";
@@ -69,23 +69,23 @@ export function TaskManagementSection() {
                 <HStack spacing={8} alignment="center">
                   <Text
                     size={16}
-                    modifiers={task.completed ? [foregroundColor("gray")] : []}
+                    modifiers={task.completed ? [foregroundStyle("gray")] : []}
                   >
                     {task.title}
                   </Text>
                   <Text
                     size={12}
                     modifiers={[
-                      foregroundColor(getPriorityColor(task.priority)),
+                      foregroundStyle(getPriorityColor(task.priority)),
                     ]}
                   >
                     {task.priority.toUpperCase()}
                   </Text>
                 </HStack>
-                <Text size={14} modifiers={[foregroundColor("gray")]}>
+                <Text size={14} modifiers={[foregroundStyle("gray")]}>
                   {task.description}
                 </Text>
-                <Text size={12} modifiers={[foregroundColor("gray")]}>
+                <Text size={12} modifiers={[foregroundStyle("gray")]}>
                   {`Due: ${task.dueDate.toLocaleDateString()}`}
                 </Text>
               </VStack>

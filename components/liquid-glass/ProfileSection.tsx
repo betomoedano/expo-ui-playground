@@ -1,12 +1,4 @@
 import {
-  background,
-  clipShape,
-  cornerRadius,
-  foregroundColor,
-  frame,
-  glassEffect,
-} from "@expo/ui/build/swift-ui/modifiers";
-import {
   Button,
   ColorPicker,
   DisclosureGroup,
@@ -21,6 +13,14 @@ import {
   Text,
   VStack,
 } from "@expo/ui/swift-ui";
+import {
+  background,
+  clipShape,
+  cornerRadius,
+  foregroundStyle,
+  frame,
+  glassEffect,
+} from "@expo/ui/swift-ui/modifiers";
 import { Image as ExpoImage } from "expo-image";
 import { Link } from "expo-router";
 import React, { use, useState } from "react";
@@ -61,14 +61,14 @@ export function ProfileSection() {
 
           <VStack alignment="leading">
             <Text
-              modifiers={[foregroundColor(profile.theme)]}
+              modifiers={[foregroundStyle(profile.theme)]}
               color={profile.theme}
               size={22}
               weight="bold"
             >
               {profile.name}
             </Text>
-            <Text modifiers={[foregroundColor("gray")]}>
+            <Text modifiers={[foregroundStyle("gray")]}>
               {profile.username}
             </Text>
           </VStack>
@@ -103,6 +103,7 @@ export function ProfileSection() {
                   clipShape("roundedRectangle"),
                 ]}
               />
+              <Text color="primary">Wi-Fi</Text>
               <Text color="primary">Wi-Fi</Text>
               <Spacer />
               {/* <ExpoUIImage

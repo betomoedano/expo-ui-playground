@@ -1,4 +1,3 @@
-import { foregroundColor } from "@expo/ui/build/swift-ui/modifiers";
 import {
   Button,
   ContextMenu,
@@ -10,6 +9,7 @@ import {
   Text,
   VStack,
 } from "@expo/ui/swift-ui";
+import { foregroundStyle } from "@expo/ui/swift-ui/modifiers";
 import React, { use } from "react";
 import { AppContext } from "./AppContext";
 import { AppState } from "./types";
@@ -190,7 +190,7 @@ export function ContextMenuSection() {
 
         <VStack spacing={12}>
           <Text size={14}>Menu Demo</Text>
-          <Text size={12} modifiers={[foregroundColor("gray")]}>
+          <Text size={12} modifiers={[foregroundStyle("gray")]}>
             Long press the menu button below to see nested context menu options
           </Text>
 
@@ -211,19 +211,19 @@ export function ContextMenuSection() {
             </Host>
 
             <VStack spacing={4} alignment="leading">
-              <Text size={12} modifiers={[foregroundColor("gray")]}>
+              <Text size={12} modifiers={[foregroundStyle("gray")]}>
                 Context Menu Features:
               </Text>
-              <Text size={10} modifiers={[foregroundColor("gray")]}>
+              <Text size={10} modifiers={[foregroundStyle("gray")]}>
                 • Nested submenus
               </Text>
-              <Text size={10} modifiers={[foregroundColor("gray")]}>
+              <Text size={10} modifiers={[foregroundStyle("gray")]}>
                 • Toggle switches
               </Text>
-              <Text size={10} modifiers={[foregroundColor("gray")]}>
+              <Text size={10} modifiers={[foregroundStyle("gray")]}>
                 • Destructive actions
               </Text>
-              <Text size={10} modifiers={[foregroundColor("gray")]}>
+              <Text size={10} modifiers={[foregroundStyle("gray")]}>
                 • System icons
               </Text>
             </VStack>
