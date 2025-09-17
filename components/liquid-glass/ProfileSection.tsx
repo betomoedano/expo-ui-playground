@@ -6,6 +6,7 @@ import {
   Group,
   HStack,
   Image,
+  LabeledContent,
   Picker,
   Section,
   Spacer,
@@ -21,6 +22,7 @@ import {
   frame,
   glassEffect,
 } from "@expo/ui/swift-ui/modifiers";
+import { isLiquidGlassAvailable } from "expo-glass-effect";
 import { Image as ExpoImage } from "expo-image";
 import { Link } from "expo-router";
 import React, { use, useState } from "react";
@@ -90,38 +92,37 @@ export function ProfileSection() {
           <Switch value={isAirplaneMode} onValueChange={setIsAirplaneMode} />
         </HStack>
 
-        <Link href="/basic/modifiers" asChild>
-          <Button>
-            <HStack spacing={8}>
-              <ExpoUIImage
-                systemName="wifi"
-                color="white"
-                size={18}
-                modifiers={[
-                  frame({ width: 28, height: 28 }),
-                  background("#007aff"),
-                  clipShape("roundedRectangle"),
-                ]}
-              />
-              <Text color="primary">Wi-Fi</Text>
-              <Text color="primary">Wi-Fi</Text>
-              <Spacer />
-              {/* <ExpoUIImage
-              systemName="chevron.right"
-              size={14}
-              color="secondary"
-            /> */}
-            </HStack>
+        <LabeledContent label="Bottom Sheet">
+          <Link href="/home/sheet" asChild>
+            <Button
+              variant={
+                isLiquidGlassAvailable() ? "glassProminent" : "borderless"
+              }
+            >
+              Open
+            </Button>
+          </Link>
+        </LabeledContent>
+
+        <LabeledContent label="Glass Prominent Button">
+          <Button
+            variant="glassProminent"
+            color="red"
+            modifiers={[foregroundStyle({ type: "color", color: "white" })]}
+          >
+            Prominent
           </Button>
-        </Link>
+        </LabeledContent>
 
-        <Button variant="borderless" onPress={() => alert("This is a button")}>
-          Borderless button
-        </Button>
-
-        <Button onPress={() => alert("This is a button")}>
-          Regular button
-        </Button>
+        <LabeledContent label="Glass Prominent Button">
+          <Button
+            variant="glassProminent"
+            color="orange"
+            modifiers={[foregroundStyle({ type: "color", color: "white" })]}
+          >
+            Orange
+          </Button>
+        </LabeledContent>
 
         <DisclosureGroup
           onStateChange={setProfileExpanded}

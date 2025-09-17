@@ -24,6 +24,18 @@ export default function HomeLayout() {
           headerLeft: () => <ContextMenuProfile />,
         }}
       />
+      <Stack.Screen
+        name="sheet"
+        options={{
+          presentation: "formSheet",
+          sheetAllowedDetents: [0.25, 0.5],
+          sheetGrabberVisible: true,
+          contentStyle: {
+            backgroundColor: isLiquidGlassAvailable() ? "transparent" : "white",
+          },
+          headerShown: false,
+        }}
+      />
     </Stack>
   );
 }

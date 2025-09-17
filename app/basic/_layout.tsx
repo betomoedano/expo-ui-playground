@@ -4,7 +4,6 @@ export default function HomeLayout() {
   return (
     <Stack>
       <Stack.Screen name="index" options={{ title: "Basic Usage" }} />
-      <Stack.Screen name="modifiers" options={{}} />
     </Stack>
   );
 }
