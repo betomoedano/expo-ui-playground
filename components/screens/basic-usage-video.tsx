@@ -8,8 +8,8 @@ export default function BasicUsageVideo() {
       contentInsetAdjustmentBehavior="automatic"
       contentContainerStyle={{ padding: 16 }}
     >
-      <Link href="/basic/modifiers" style={{ marginBottom: 30 }}>
-        Go to Modifiers
+      <Link href="/home/sheet" style={{ marginBottom: 30 }}>
+        Go to Sheet
       </Link>
 
       <NormalView />

@@ -104,6 +104,39 @@ export function ProfileSection() {
           </Link>
         </LabeledContent>
 
+        <LabeledContent label="Mini Button">
+          <Button
+            controlSize="mini"
+            variant={isLiquidGlassAvailable() ? "glassProminent" : "borderless"}
+          >
+            Mini Button
+          </Button>
+        </LabeledContent>
+        <LabeledContent label="Small Button">
+          <Button
+            controlSize="small"
+            variant={isLiquidGlassAvailable() ? "glassProminent" : "borderless"}
+          >
+            Small Button
+          </Button>
+        </LabeledContent>
+        <LabeledContent label="Regular Button">
+          <Button
+            controlSize="regular"
+            variant={isLiquidGlassAvailable() ? "glassProminent" : "borderless"}
+          >
+            Regular Button
+          </Button>
+        </LabeledContent>
+        <LabeledContent label="Large Button">
+          <Button
+            controlSize="large"
+            variant={isLiquidGlassAvailable() ? "glassProminent" : "borderless"}
+          >
+            Large Button
+          </Button>
+        </LabeledContent>
+
         {isLiquidGlassAvailable() && (
           <LabeledContent label="Glass Prominent Button">
             <Button
