@@ -11,6 +11,10 @@ export default function TabLayout() {
         <Label>Basic</Label>
         <Icon sf="laser.burst" drawable="custom_android_drawable" />
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="todos">
+        <Label>Todos</Label>
+        <Icon sf="checkmark.circle.fill" drawable="custom_android_drawable" />
+      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="settings" role="search">
         <Icon sf="gear" drawable="custom_settings_drawable" />
         <Label>Settings</Label>
