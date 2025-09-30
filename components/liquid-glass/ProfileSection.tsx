@@ -104,25 +104,28 @@ export function ProfileSection() {
           </Link>
         </LabeledContent>
 
-        <LabeledContent label="Glass Prominent Button">
-          <Button
-            variant="glassProminent"
-            color="red"
-            modifiers={[foregroundStyle({ type: "color", color: "white" })]}
-          >
-            Prominent
-          </Button>
-        </LabeledContent>
-
-        <LabeledContent label="Glass Prominent Button">
-          <Button
-            variant="glassProminent"
-            color="orange"
-            modifiers={[foregroundStyle({ type: "color", color: "white" })]}
-          >
-            Orange
-          </Button>
-        </LabeledContent>
+        {isLiquidGlassAvailable() && (
+          <LabeledContent label="Glass Prominent Button">
+            <Button
+              variant="glassProminent"
+              color="red"
+              modifiers={[foregroundStyle({ type: "color", color: "white" })]}
+            >
+              Prominent
+            </Button>
+          </LabeledContent>
+        )}
+        {isLiquidGlassAvailable() && (
+          <LabeledContent label="Glass Prominent Button">
+            <Button
+              variant="glassProminent"
+              color="orange"
+              modifiers={[foregroundStyle({ type: "color", color: "white" })]}
+            >
+              Orange
+            </Button>
+          </LabeledContent>
+        )}
 
         <DisclosureGroup
           onStateChange={setProfileExpanded}
