@@ -105,10 +105,7 @@ export function ProfileSection() {
         </LabeledContent>
 
         <LabeledContent label="Mini Button">
-          <Button
-            controlSize="mini"
-            variant={isLiquidGlassAvailable() ? "glassProminent" : "borderless"}
-          >
+          <Button controlSize="mini" variant="bordered">
             Mini Button
           </Button>
         </LabeledContent>
@@ -132,33 +129,14 @@ export function ProfileSection() {
           <Button
             controlSize="large"
             variant={isLiquidGlassAvailable() ? "glassProminent" : "borderless"}
+            color="orange"
           >
-            Large Button
+            <HStack spacing={8}>
+              <ExpoUIImage systemName="photo" color="white" size={18} />
+              <Text>Large Button</Text>
+            </HStack>
           </Button>
         </LabeledContent>
-
-        {isLiquidGlassAvailable() && (
-          <LabeledContent label="Glass Prominent Button">
-            <Button
-              variant="glassProminent"
-              color="red"
-              modifiers={[foregroundStyle({ type: "color", color: "white" })]}
-            >
-              Prominent
-            </Button>
-          </LabeledContent>
-        )}
-        {isLiquidGlassAvailable() && (
-          <LabeledContent label="Glass Prominent Button">
-            <Button
-              variant="glassProminent"
-              color="orange"
-              modifiers={[foregroundStyle({ type: "color", color: "white" })]}
-            >
-              Orange
-            </Button>
-          </LabeledContent>
-        )}
 
         <DisclosureGroup
           onStateChange={setProfileExpanded}
