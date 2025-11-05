@@ -1,3 +1,9 @@
+import { Button, Host, Label } from "@expo/ui/swift-ui";
+import {
+  background,
+  foregroundStyle,
+  padding,
+} from "@expo/ui/swift-ui/modifiers";
 import { Link } from "expo-router";
 import { ScrollView } from "react-native";
 import NormalView from "../NormalView";
@@ -13,6 +19,20 @@ export default function BasicUsageVideo() {
       </Link>
 
       <NormalView />
+
+      <Host matchContents>
+        <Button>
+          <Label
+            title="title"
+            systemImage="gear"
+            modifiers={[
+              foregroundStyle({ type: "color", color: "black" }),
+              padding({ all: 12 }),
+              background("yellow"),
+            ]}
+          />
+        </Button>
+      </Host>
     </ScrollView>
   );
 }

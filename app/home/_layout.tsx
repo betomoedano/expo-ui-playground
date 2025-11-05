@@ -1,4 +1,3 @@
-import ContextMenuProfile from "@/components/ContextMenu.ios";
 import { isLiquidGlassAvailable } from "expo-glass-effect";
 import { Stack } from "expo-router";
 import { useColorScheme } from "react-native";
@@ -9,6 +8,34 @@ export default function HomeLayout() {
   const isGlassAvailable = isLiquidGlassAvailable();
   const blurEffect =
     theme === "dark" ? "systemMaterialDark" : "systemMaterialLight";
+
+  const handleShowListInfo = () => {
+    console.log("Show List Info pressed");
+  };
+
+  const handleSelectReminders = () => {
+    console.log("Select Reminders pressed");
+  };
+
+  const handlePrint = () => {
+    console.log("Print pressed");
+  };
+
+  const handleDeleteList = () => {
+    console.log("Delete List pressed");
+  };
+
+  const handleNotifications = () => {
+    console.log("Notifications pressed");
+  };
+
+  const handleDebugMode = () => {
+    console.log("Debug Mode pressed");
+  };
+
+  const handleResetSettings = () => {
+    console.log("Reset Settings pressed");
+  };
 
   return (
     <Stack>
@@ -21,7 +48,163 @@ export default function HomeLayout() {
           headerLargeStyle: { backgroundColor: "transparent" },
           headerBlurEffect: isGlassAvailable ? undefined : blurEffect,
           title: "Home",
-          headerLeft: () => <ContextMenuProfile />,
+          unstable_headerRightItems: (props) => [
+            {
+              type: "menu",
+              variant: "prominent",
+              // icon: {
+              //   name: "ellipsis",
+              //   type: "sfSymbol",
+              // },
+              label: "Options",
+              menu: {
+                title: "Home Options",
+                items: [
+                  {
+                    type: "action",
+                    label: "Show List Info",
+                    onPress: handleShowListInfo,
+                    icon: {
+                      name: "info.circle",
+                      type: "sfSymbol",
+                    },
+                  },
+                  {
+                    type: "action",
+                    label: "Select Reminders",
+                    onPress: handleSelectReminders,
+                    icon: {
+                      name: "checkmark.circle",
+                      type: "sfSymbol",
+                    },
+                  },
+                  {
+                    type: "submenu",
+                    label: "Sort By",
+                    icon: {
+                      name: "arrow.up.arrow.down",
+                      type: "sfSymbol",
+                    },
+                    items: [
+                      {
+                        type: "action",
+                        label: "Manual",
+                        onPress: () => console.log("Manual sort pressed"),
+                        icon: {
+                          name: "hand.point.up.left",
+                          type: "sfSymbol",
+                        },
+                      },
+                      {
+                        type: "action",
+                        label: "Due Date",
+                        onPress: () => console.log("Due Date sort pressed"),
+                        icon: {
+                          name: "calendar",
+                          type: "sfSymbol",
+                        },
+                      },
+                      {
+                        type: "action",
+                        label: "Creation Date",
+                        onPress: () =>
+                          console.log("Creation Date sort pressed"),
+                        icon: {
+                          name: "plus.circle",
+                          type: "sfSymbol",
+                        },
+                      },
+                      {
+                        type: "action",
+                        label: "Priority",
+                        onPress: () => console.log("Priority sort pressed"),
+                        icon: {
+                          name: "exclamationmark.triangle",
+                          type: "sfSymbol",
+                        },
+                      },
+                      {
+                        type: "action",
+                        label: "Title",
+                        onPress: () => console.log("Title sort pressed"),
+                        icon: {
+                          name: "textformat.abc",
+                          type: "sfSymbol",
+                        },
+                      },
+                    ],
+                  },
+                  {
+                    type: "submenu",
+                    label: "Settings",
+                    icon: {
+                      name: "gear",
+                      type: "sfSymbol",
+                    },
+                    items: [
+                      {
+                        type: "action",
+                        label: "Notifications",
+                        onPress: handleNotifications,
+                        icon: {
+                          name: "bell",
+                          type: "sfSymbol",
+                        },
+                      },
+                      {
+                        type: "submenu",
+                        label: "Advanced",
+                        icon: {
+                          name: "wrench.and.screwdriver",
+                          type: "sfSymbol",
+                        },
+                        items: [
+                          {
+                            type: "action",
+                            label: "Debug Mode",
+                            onPress: handleDebugMode,
+                            icon: {
+                              name: "ladybug",
+                              type: "sfSymbol",
+                            },
+                          },
+                          {
+                            type: "action",
+                            label: "Reset Settings",
+                            onPress: handleResetSettings,
+                            icon: {
+                              name: "arrow.clockwise",
+                              type: "sfSymbol",
+                            },
+                            destructive: true,
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                  {
+                    type: "action",
+                    label: "Print",
+                    onPress: handlePrint,
+                    icon: {
+                      name: "printer",
+                      type: "sfSymbol",
+                    },
+                  },
+                  {
+                    type: "action",
+                    label: "Delete List",
+                    onPress: handleDeleteList,
+                    icon: {
+                      name: "trash",
+                      type: "sfSymbol",
+                    },
+                    destructive: true,
+                  },
+                ],
+              },
+            },
+          ],
         }}
       />
       <Stack.Screen
