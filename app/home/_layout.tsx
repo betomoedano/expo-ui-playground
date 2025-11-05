@@ -1,4 +1,5 @@
-import { isLiquidGlassAvailable } from "expo-glass-effect";
+import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
+import { Image } from "expo-image";
 import { Stack } from "expo-router";
 import { useColorScheme } from "react-native";
 
@@ -37,6 +38,14 @@ export default function HomeLayout() {
     console.log("Reset Settings pressed");
   };
 
+  const handleAddItem = () => {
+    console.log("Add Item pressed");
+  };
+
+  const handleSearch = () => {
+    console.log("Search pressed");
+  };
+
   return (
     <Stack>
       <Stack.Screen
@@ -48,6 +57,55 @@ export default function HomeLayout() {
           headerLargeStyle: { backgroundColor: "transparent" },
           headerBlurEffect: isGlassAvailable ? undefined : blurEffect,
           title: "Home",
+          unstable_headerLeftItems: (props) => [
+            {
+              type: "button",
+              label: "Add",
+              icon: {
+                name: "plus",
+                type: "sfSymbol",
+              },
+              variant: "done",
+              onPress: handleAddItem,
+              accessibilityLabel: "Add new item",
+            },
+            {
+              type: "custom",
+              element: (
+                <GlassView
+                  style={{
+                    width: 45,
+                    height: 45,
+                    borderRadius: 22.5,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                  isInteractive={true}
+                >
+                  <Image
+                    source={{ uri: "https://github.com/betomoedano.png" }}
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 18,
+                    }}
+                  />
+                </GlassView>
+              ),
+              hidesSharedBackground: true,
+            },
+            {
+              type: "button",
+              label: "Search",
+              icon: {
+                name: "magnifyingglass",
+                type: "sfSymbol",
+              },
+              variant: "plain",
+              onPress: handleSearch,
+              accessibilityLabel: "Search items",
+            },
+          ],
           unstable_headerRightItems: (props) => [
             {
               type: "menu",
