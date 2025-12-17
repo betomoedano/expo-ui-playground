@@ -5,13 +5,13 @@ export function ButtonsSection() {
   return (
     <Section title="🔘 Buttons">
       <VStack spacing={12}>
-        <Button variant="default">Default</Button>
-        <Button variant="bordered">Bordered</Button>
+        <Button label="Default" />
+        {/* <Button variant="bordered">Bordered</Button>
         <Button variant="plain">Plain</Button>
         <Button variant="glass">Glass</Button>
         <Button variant="glassProminent">Glass Prominent</Button>
         <Button variant="borderedProminent">Bordered Prominent</Button>
-        <Button variant="borderless">Borderless</Button>
+        <Button variant="borderless">Borderless</Button> */}
       </VStack>
     </Section>
   );

@@ -16,13 +16,16 @@ import {
 } from "@expo/ui/swift-ui";
 import {
   background,
+  buttonStyle,
   clipShape,
+  controlSize,
   cornerRadius,
   foregroundStyle,
   frame,
   glassEffect,
+  shapes,
+  tint,
 } from "@expo/ui/swift-ui/modifiers";
-import { isLiquidGlassAvailable } from "expo-glass-effect";
 import { Image as ExpoImage } from "expo-image";
 import { Link } from "expo-router";
 import React, { use, useState } from "react";
@@ -45,149 +48,128 @@ export function ProfileSection() {
       : 40;
 
   return (
-    <>
-      <Section title="👤 User Profile">
-        <HStack spacing={16}>
-          <HStack
-            modifiers={[
-              frame({ width: imageSize, height: imageSize }),
-              cornerRadius(100),
-            ]}
-          >
-            <ExpoImage
-              source={{ uri: "https://github.com/betomoedano.png" }}
-              style={{ width: imageSize, height: imageSize }}
-              contentFit="fill"
-            />
-          </HStack>
-
-          <VStack alignment="leading">
-            <Text
-              modifiers={[foregroundStyle(profile.theme)]}
-              color={profile.theme}
-              size={22}
-              weight="bold"
-            >
-              {profile.name}
-            </Text>
-            <Text modifiers={[foregroundStyle("gray")]}>
-              {profile.username}
-            </Text>
-          </VStack>
-        </HStack>
-
-        <HStack spacing={8}>
-          <ExpoUIImage
-            systemName="airplane"
-            color="white"
-            size={18}
-            modifiers={[
-              frame({ width: 28, height: 28 }),
-              background("#ffa500"),
-              clipShape("roundedRectangle"),
-            ]}
-          />
-          <Text>Airplane Mode</Text>
-          <Spacer />
-          <Switch value={isAirplaneMode} onValueChange={setIsAirplaneMode} />
-        </HStack>
-
-        <LabeledContent label="Bottom Sheet">
-          <Link href="/home/sheet" asChild>
-            <Button
-              variant={
-                isLiquidGlassAvailable() ? "glassProminent" : "borderless"
-              }
-            >
-              Open
-            </Button>
-          </Link>
-        </LabeledContent>
-
-        <LabeledContent label="Mini Button">
-          <Button
-            controlSize="mini"
-            variant={isLiquidGlassAvailable() ? "glassProminent" : "borderless"}
-          >
-            Mini Button
-          </Button>
-        </LabeledContent>
-        <LabeledContent label="Small Button">
-          <Button
-            controlSize="small"
-            variant={isLiquidGlassAvailable() ? "glassProminent" : "borderless"}
-          >
-            Small Button
-          </Button>
-        </LabeledContent>
-        <LabeledContent label="Regular Button">
-          <Button
-            controlSize="regular"
-            variant={isLiquidGlassAvailable() ? "glassProminent" : "borderless"}
-          >
-            Regular Button
-          </Button>
-        </LabeledContent>
-        <LabeledContent label="Large Button">
-          <Button
-            controlSize="large"
-            variant={isLiquidGlassAvailable() ? "glassProminent" : "borderless"}
-          >
-            Large Button
-          </Button>
-        </LabeledContent>
-
-        {isLiquidGlassAvailable() && (
-          <LabeledContent label="Glass Prominent Button">
-            <Button
-              variant="glassProminent"
-              color="red"
-              modifiers={[foregroundStyle({ type: "color", color: "white" })]}
-            >
-              Prominent
-            </Button>
-          </LabeledContent>
-        )}
-        {isLiquidGlassAvailable() && (
-          <LabeledContent label="Glass Prominent Button">
-            <Button
-              variant="glassProminent"
-              color="orange"
-              modifiers={[foregroundStyle({ type: "color", color: "white" })]}
-            >
-              Orange
-            </Button>
-          </LabeledContent>
-        )}
-
-        <DisclosureGroup
-          onStateChange={setProfileExpanded}
-          isExpanded={profileExpanded}
-          label="Profile Settings"
+    <Section title="👤 User Profile">
+      <HStack spacing={16}>
+        <HStack
+          modifiers={[
+            frame({ width: imageSize, height: imageSize }),
+            cornerRadius(100),
+          ]}
         >
-          <Picker
-            label="Profile Image Size"
-            options={profileSizes}
-            selectedIndex={profileSizeIndex}
-            onOptionSelected={({ nativeEvent: { index } }) => {
-              updateProfile({
-                profileImageSize: profileSizes[index] as
-                  | "small"
-                  | "medium"
-                  | "large",
-              });
-            }}
-            variant="menu"
+          <ExpoImage
+            source={{ uri: "https://github.com/betomoedano.png" }}
+            style={{ width: imageSize, height: imageSize }}
+            contentFit="fill"
           />
+        </HStack>
 
-          <ColorPicker
-            label="Theme Color"
-            selection={profile.theme}
-            supportsOpacity={false}
-            onValueChanged={(color) => updateProfile({ theme: color })}
+        <VStack alignment="leading">
+          <Text
+            modifiers={[foregroundStyle(profile.theme)]}
+            color={profile.theme}
+            size={22}
+            weight="bold"
+          >
+            {profile.name}
+          </Text>
+          <Text modifiers={[foregroundStyle("gray")]}>{profile.username}</Text>
+        </VStack>
+      </HStack>
+
+      <HStack spacing={8}>
+        <ExpoUIImage
+          systemName="airplane"
+          color="white"
+          size={18}
+          modifiers={[
+            frame({ width: 28, height: 28 }),
+            background("#ffa500"),
+            clipShape("roundedRectangle"),
+          ]}
+        />
+        <Text>Airplane Mode</Text>
+        <Spacer />
+        <Switch value={isAirplaneMode} onValueChange={setIsAirplaneMode} />
+      </HStack>
+
+      <LabeledContent label="Bottom Sheet">
+        <Link href="/home/sheet" asChild>
+          <Button
+            label="Open"
+            modifiers={[
+              glassEffect({
+                glass: { variant: "regular", interactive: true },
+              }),
+              buttonStyle("glassProminent"),
+            ]}
           />
-        </DisclosureGroup>
-      </Section>
+        </Link>
+      </LabeledContent>
+
+      <LabeledContent label="Mini Button">
+        <Button
+          label="Mini Button"
+          modifiers={[buttonStyle("bordered"), controlSize("mini")]}
+        />
+      </LabeledContent>
+      <LabeledContent label="Small Button">
+        <Button
+          label="Small Button"
+          modifiers={[buttonStyle("bordered"), controlSize("small")]}
+        />
+      </LabeledContent>
+      <LabeledContent label="Regular Button">
+        <Button
+          label="Regular Button"
+          modifiers={[buttonStyle("bordered"), controlSize("regular")]}
+        />
+      </LabeledContent>
+      <LabeledContent label="Large Button">
+        <Button
+          label="Large Button"
+          modifiers={[
+            buttonStyle("bordered"),
+            controlSize("large"),
+            foregroundStyle("black"),
+            background("white", shapes.roundedRectangle({ cornerRadius: 10 })),
+          ]}
+        />
+      </LabeledContent>
+
+      <LabeledContent label="Glass Prominent">
+        <Button
+          label="Help & Support"
+          modifiers={[
+            buttonStyle("glassProminent"),
+            controlSize("large"),
+            tint("black"),
+            foregroundStyle("white"),
+          ]}
+        />
+      </LabeledContent>
+
+      <DisclosureGroup
+        onStateChange={setProfileExpanded}
+        isExpanded={profileExpanded}
+        label="Profile Settings"
+      >
+        <Picker
+          label="Profile Image Size"
+          selection={profileSizes[profileSizeIndex]}
+          onSelectionChange={(selection) => {
+            updateProfile({
+              profileImageSize: selection as "small" | "medium" | "large",
+            });
+          }}
+        />
+
+        <ColorPicker
+          label="Theme Color"
+          selection={profile.theme}
+          supportsOpacity={false}
+          onValueChanged={(color) => updateProfile({ theme: color })}
+        />
+      </DisclosureGroup>
 
       <Group
         modifiers={[
@@ -201,9 +183,6 @@ export function ProfileSection() {
           size={50}
         />
       </Group>
-      <Button variant="borderless" onPress={() => alert("This is a button")}>
-        Borderless button
-      </Button>
-    </>
+    </Section>
   );
 }

@@ -3,12 +3,7 @@ import React from "react";
 
 import { AppProvider } from "../liquid-glass/AppContext";
 import { ButtonsSection } from "../liquid-glass/ButtonsSection";
-import { ContextMenuSection } from "../liquid-glass/ContextMenuSection";
-import { DashboardSection } from "../liquid-glass/DashboardSection";
-import { DateTimeSection } from "../liquid-glass/DateTimeSection";
 import { ProfileSection } from "../liquid-glass/ProfileSection";
-import { SettingsSection } from "../liquid-glass/SettingsSection";
-import { TaskManagementSection } from "../liquid-glass/TaskManagementSection";
 
 function AppContent() {
   return (
@@ -16,11 +11,11 @@ function AppContent() {
       <Form>
         <ProfileSection />
         <ButtonsSection />
-        <DashboardSection />
+        {/* <DashboardSection />
         <TaskManagementSection />
         <ContextMenuSection />
         <DateTimeSection />
-        <SettingsSection />
+        <SettingsSection /> */}
       </Form>
     </Host>
   );
