@@ -59,17 +59,6 @@ export default function HomeLayout() {
           title: "Home",
           unstable_headerLeftItems: (props) => [
             {
-              type: "button",
-              label: "Add",
-              icon: {
-                name: "plus",
-                type: "sfSymbol",
-              },
-              variant: "done",
-              onPress: handleAddItem,
-              accessibilityLabel: "Add new item",
-            },
-            {
               type: "custom",
               element: (
                 <GlassView
@@ -96,6 +85,16 @@ export default function HomeLayout() {
             },
             {
               type: "button",
+              label: "Add",
+              icon: {
+                name: "plus",
+                type: "sfSymbol",
+              },
+              // variant: "done",
+              onPress: handleAddItem,
+            },
+            {
+              type: "button",
               label: "Search",
               icon: {
                 name: "magnifyingglass",
@@ -110,10 +109,10 @@ export default function HomeLayout() {
             {
               type: "menu",
               variant: "prominent",
-              // icon: {
-              //   name: "ellipsis",
-              //   type: "sfSymbol",
-              // },
+              icon: {
+                name: "ellipsis",
+                type: "sfSymbol",
+              },
               label: "Options",
               menu: {
                 title: "Home Options",
@@ -268,13 +267,7 @@ export default function HomeLayout() {
       <Stack.Screen
         name="sheet"
         options={{
-          presentation: "formSheet",
-          sheetAllowedDetents: [0.25, 0.5],
-          sheetGrabberVisible: true,
-          contentStyle: {
-            backgroundColor: isLiquidGlassAvailable() ? "transparent" : "white",
-          },
-          headerShown: false,
+          presentation: "modal",
         }}
       />
     </Stack>

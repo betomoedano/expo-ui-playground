@@ -1,25 +1,45 @@
+import { router, Stack } from "expo-router";
 import { ScrollView, Text } from "react-native";
 
 export default function SheetScreen() {
   return (
-    <ScrollView
-      contentInsetAdjustmentBehavior="automatic"
-      contentContainerStyle={{
-        padding: 16,
-        paddingTop: 40,
-        paddingBottom: 100,
-      }}
-    >
-      <Text style={{ fontSize: 24, fontWeight: "bold" }}>Sheet Screen</Text>
-      {dummyData.map((item, index) => (
-        <Text
-          style={{ fontSize: 24, fontWeight: "bold", marginVertical: 8 }}
-          key={index}
-        >
-          {item}
-        </Text>
-      ))}
-    </ScrollView>
+    <>
+      <Stack.Screen
+        options={{
+          unstable_headerLeftItems: (props) => [
+            {
+              type: "button",
+              label: "Close",
+              onPress: () => {
+                router.back();
+              },
+              icon: {
+                name: "xmark",
+                type: "sfSymbol",
+              },
+            },
+          ],
+        }}
+      />
+      <ScrollView
+        contentInsetAdjustmentBehavior="automatic"
+        contentContainerStyle={{
+          padding: 16,
+          paddingTop: 40,
+          paddingBottom: 100,
+        }}
+      >
+        <Text style={{ fontSize: 24, fontWeight: "bold" }}>Sheet Screen</Text>
+        {dummyData.map((item, index) => (
+          <Text
+            style={{ fontSize: 24, fontWeight: "bold", marginVertical: 8 }}
+            key={index}
+          >
+            {item}
+          </Text>
+        ))}
+      </ScrollView>
+    </>
   );
 }
 
