@@ -189,9 +189,8 @@ export function DashboardSection() {
                 setFocusLevel(Math.random());
               }}
               systemImage="shuffle"
-            >
-              Randomize
-            </Button>
+              label="Randomize"
+            />
           </HStack>
         </VStack>
       </VStack>

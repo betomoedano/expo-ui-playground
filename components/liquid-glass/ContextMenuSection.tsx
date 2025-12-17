@@ -136,6 +136,7 @@ export function ContextMenuSection() {
           <Button
             key={index}
             systemImage={option.systemImage}
+            label={option.title}
             role={option.destructive ? "destructive" : undefined}
             onPress={() => {
               console.log(`Context menu action: ${option.title}`);
@@ -146,9 +147,7 @@ export function ContextMenuSection() {
                   .forEach((task) => toggleTask(task.id));
               }
             }}
-          >
-            {option.title}
-          </Button>
+          />
         );
 
       case "switch":
@@ -169,7 +168,7 @@ export function ContextMenuSection() {
           <Submenu
             key={index}
             button={
-              <Button systemImage={option.systemImage}>{option.title}</Button>
+              <Button systemImage={option.systemImage} label={option.title} />
             }
           >
             {option.items?.map((subItem: any, subIndex: number) =>
@@ -203,9 +202,10 @@ export function ContextMenuSection() {
                   )}
                 </ContextMenu.Items>
                 <ContextMenu.Trigger>
-                  <Button systemImage="ellipsis.circle.fill">
-                    Menu Options
-                  </Button>
+                  <Button
+                    systemImage="ellipsis.circle.fill"
+                    label="Menu Options"
+                  />
                 </ContextMenu.Trigger>
               </ContextMenu>
             </Host>

@@ -118,11 +118,10 @@ export default function ContextMenuProfile() {
           <Button
             key={index}
             systemImage={option.systemImage}
+            label={option.title}
             role={option.destructive ? "destructive" : undefined}
             onPress={() => console.log(`Pressed: ${option.title}`)}
-          >
-            {option.title}
-          </Button>
+          />
         );
 
       case "switch":
@@ -142,7 +141,7 @@ export default function ContextMenuProfile() {
           <Submenu
             key={index}
             button={
-              <Button systemImage={option.systemImage}>{option.title}</Button>
+              <Button systemImage={option.systemImage} label={option.title} />
             }
           >
             {option.items?.map((subItem: any, subIndex: number) =>

@@ -34,24 +34,20 @@ export function SettingsSection() {
       >
         <Picker
           label="App Theme"
-          options={themeOptions}
-          selectedIndex={themeIndex}
-          onOptionSelected={({ nativeEvent: { index } }) => {
-            updateSettings({
-              theme: themeOptions[index] as "light" | "dark" | "auto",
-            });
+          selection={themeOptions[themeIndex]}
+          onSelectionChange={(selection) => {
+            updateSettings({ theme: selection as "light" | "dark" | "auto" });
           }}
-          variant="menu"
         />
 
         <Picker
           label="Language"
-          options={languageOptions}
-          selectedIndex={languageIndex}
-          onOptionSelected={({ nativeEvent: { index } }) => {
-            updateSettings({ language: languageOptions[index] });
+          selection={languageOptions[languageIndex]}
+          onSelectionChange={(selection) => {
+            updateSettings({
+              language: selection as "en" | "es" | "fr" | "de",
+            });
           }}
-          variant="menu"
         />
       </DisclosureGroup>
     </Section>

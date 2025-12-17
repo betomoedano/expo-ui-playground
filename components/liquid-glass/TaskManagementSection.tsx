@@ -44,14 +44,10 @@ export function TaskManagementSection() {
     <Section title="✅ Task Management">
       <Picker
         label="Filter Tasks"
-        options={filterOptions}
-        selectedIndex={filterIndex}
-        onOptionSelected={({ nativeEvent: { index } }) => {
-          setTaskFilter(
-            filterOptions[index] as "all" | "pending" | "completed"
-          );
+        selection={filterOptions[filterIndex]}
+        onSelectionChange={(selection) => {
+          setTaskFilter(selection as "all" | "pending" | "completed");
         }}
-        variant="segmented"
       />
 
       {filteredTasks.length === 0 ? (

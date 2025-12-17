@@ -1,10 +1,5 @@
-import {
-  DateTimePicker,
-  DateTimePickerProps,
-  Picker,
-  Section,
-  Text,
-} from "@expo/ui/swift-ui";
+import { DatePicker, Picker, Section, Text } from "@expo/ui/swift-ui";
+import { cornerRadius, frame } from "@expo/ui/swift-ui/modifiers";
 import React, { use, useState } from "react";
 import { AppContext } from "./AppContext";
 import { AppState } from "./types";
@@ -25,34 +20,34 @@ export function DateTimeSection() {
 
       <Picker
         label="Display Style"
-        options={displayOptions}
-        selectedIndex={displayStyle}
-        onOptionSelected={({ nativeEvent: { index } }) => {
-          setDisplayStyle(index);
+        selection={displayOptions[displayStyle]}
+        onSelectionChange={(selection) => {
+          setDisplayStyle(
+            displayOptions.indexOf(
+              selection as "compact" | "graphical" | "wheel"
+            )
+          );
         }}
-        variant="segmented"
       />
 
       <Picker
         label="Picker Type"
-        options={typeOptions}
-        selectedIndex={pickerType}
-        onOptionSelected={({ nativeEvent: { index } }) => {
-          setPickerType(index);
+        selection={typeOptions[pickerType]}
+        onSelectionChange={(selection) => {
+          setPickerType(
+            typeOptions.indexOf(
+              selection as "date" | "hourAndMinute" | "dateAndTime"
+            )
+          );
         }}
-        variant="segmented"
       />
 
-      <DateTimePicker
-        onDateSelected={(date) => {
+      <DatePicker
+        onDateChange={(date) => {
           setSelectedDate(date);
         }}
-        displayedComponents={
-          typeOptions[pickerType] as DateTimePickerProps["displayedComponents"]
-        }
-        title="Select Date & Time"
-        initialDate={selectedDate.toISOString()}
-        variant={displayOptions[displayStyle] as DateTimePickerProps["variant"]}
+        selection={selectedDate}
+        modifiers={[frame({ width: 300 }), cornerRadius(10)]}
       />
     </Section>
   );
