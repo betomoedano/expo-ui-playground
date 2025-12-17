@@ -10,20 +10,6 @@ export default function TabLayout() {
           drawable="custom_android_drawable"
         />
       </NativeTabs.Trigger>
-      {/* <NativeTabs.Trigger name="basic">
-        <NativeTabs.Trigger.Label>Basic</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          sf="laser.burst"
-          drawable="custom_android_drawable"
-        />
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="settings" role="search">
-        <NativeTabs.Trigger.Label>Settings</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          sf="gear"
-          drawable="custom_settings_drawable"
-        />
-      </NativeTabs.Trigger> */}
     </NativeTabs>
   );
 }
