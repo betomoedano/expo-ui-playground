@@ -1,6 +1,6 @@
 # 🧪 Expo UI Playground
 
-An **experimental playground** for exploring and showcasing [Expo UI](https://docs.expo.dev/ui/overview/) components with comprehensive examples and real-world implementations.
+An **experimental playground** for exploring and showcasing [Expo UI](https://docs.expo.dev/versions/latest/sdk/ui/) components with comprehensive examples and real-world implementations.
 
 ## 🎥 Video Tutorial
 
