@@ -3,7 +3,7 @@
  * Global state management for the declutter app
  */
 
-import React, { createContext, ReactNode, useState, useEffect } from 'react';
+import React, { createContext, ReactNode, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   DeclutterState,
@@ -16,6 +16,17 @@ import {
   CleaningSession,
   BADGES,
   Badge,
+  Mascot,
+  MascotPersonality,
+  MascotMood,
+  FocusSession,
+  CollectedItem,
+  CollectionStats,
+  SpawnEvent,
+  Collectible,
+  COLLECTIBLES,
+  DEFAULT_FOCUS_SETTINGS,
+  FocusModeSettings,
 } from '@/types/declutter';
 import { setGeminiApiKey } from '@/services/gemini';
 
@@ -26,6 +37,9 @@ const STORAGE_KEYS = {
   STATS: '@declutterly_stats',
   SETTINGS: '@declutterly_settings',
   API_KEY: '@declutterly_api_key',
+  MASCOT: '@declutterly_mascot',
+  COLLECTION: '@declutterly_collection',
+  COLLECTION_STATS: '@declutterly_collection_stats',
 };
 
 // Default stats
@@ -47,6 +61,20 @@ const defaultSettings: AppSettings = {
   hapticFeedback: true,
   encouragementLevel: 'moderate',
   taskBreakdownLevel: 'detailed',
+  focusMode: DEFAULT_FOCUS_SETTINGS,
+  arCollectionEnabled: true,
+  collectibleNotifications: true,
+};
+
+// Default collection stats
+const defaultCollectionStats: CollectionStats = {
+  totalCollected: 0,
+  uniqueCollected: 0,
+  commonCount: 0,
+  uncommonCount: 0,
+  rareCount: 0,
+  epicCount: 0,
+  legendaryCount: 0,
 };
 
 // Create context
@@ -70,6 +98,17 @@ export function DeclutterProvider({ children }: { children: ReactNode }) {
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
+  // Mascot state
+  const [mascot, setMascot] = useState<Mascot | null>(null);
+
+  // Focus mode state
+  const [focusSession, setFocusSession] = useState<FocusSession | null>(null);
+
+  // Collection state
+  const [collection, setCollection] = useState<CollectedItem[]>([]);
+  const [collectionStats, setCollectionStats] = useState<CollectionStats>(defaultCollectionStats);
+  const [activeSpawn, setActiveSpawn] = useState<SpawnEvent | null>(null);
+
   // Load data from storage on mount
   useEffect(() => {
     loadData();
@@ -80,16 +119,67 @@ export function DeclutterProvider({ children }: { children: ReactNode }) {
     if (isLoaded) {
       saveData();
     }
-  }, [user, rooms, stats, settings, isLoaded]);
+  }, [user, rooms, stats, settings, mascot, collection, collectionStats, isLoaded]);
+
+  // Update mascot mood based on activity
+  useEffect(() => {
+    if (mascot) {
+      const interval = setInterval(() => {
+        updateMascotStatus();
+      }, 60000); // Check every minute
+      return () => clearInterval(interval);
+    }
+  }, [mascot]);
+
+  function updateMascotStatus() {
+    if (!mascot) return;
+
+    const now = new Date();
+    const hoursSinceInteraction = (now.getTime() - new Date(mascot.lastInteraction).getTime()) / (1000 * 60 * 60);
+    const hoursSinceFed = (now.getTime() - new Date(mascot.lastFed).getTime()) / (1000 * 60 * 60);
+
+    let newMood: MascotMood = mascot.mood;
+    let newHunger = Math.max(0, mascot.hunger - hoursSinceFed * 5);
+    let newEnergy = Math.min(100, mascot.energy + 2);
+    let newHappiness = mascot.happiness;
+
+    // Mood logic
+    if (hoursSinceInteraction > 24) {
+      newMood = 'sad';
+      newHappiness = Math.max(0, newHappiness - 10);
+    } else if (newHunger < 20) {
+      newMood = 'sad';
+    } else if (hoursSinceInteraction > 12) {
+      newMood = 'neutral';
+    } else if (newHunger > 80 && newHappiness > 80) {
+      newMood = 'ecstatic';
+    } else if (newHunger > 60) {
+      newMood = 'happy';
+    }
+
+    // Update if changed
+    if (newMood !== mascot.mood || newHunger !== mascot.hunger) {
+      setMascot(prev => prev ? {
+        ...prev,
+        mood: newMood,
+        hunger: newHunger,
+        energy: newEnergy,
+        happiness: newHappiness,
+      } : null);
+    }
+  }
 
   async function loadData() {
     try {
-      const [userStr, roomsStr, statsStr, settingsStr, apiKey] = await Promise.all([
+      const [userStr, roomsStr, statsStr, settingsStr, apiKey, mascotStr, collectionStr, collectionStatsStr] = await Promise.all([
         AsyncStorage.getItem(STORAGE_KEYS.USER),
         AsyncStorage.getItem(STORAGE_KEYS.ROOMS),
         AsyncStorage.getItem(STORAGE_KEYS.STATS),
         AsyncStorage.getItem(STORAGE_KEYS.SETTINGS),
         AsyncStorage.getItem(STORAGE_KEYS.API_KEY),
+        AsyncStorage.getItem(STORAGE_KEYS.MASCOT),
+        AsyncStorage.getItem(STORAGE_KEYS.COLLECTION),
+        AsyncStorage.getItem(STORAGE_KEYS.COLLECTION_STATS),
       ]);
 
       if (userStr) {
@@ -100,7 +190,6 @@ export function DeclutterProvider({ children }: { children: ReactNode }) {
 
       if (roomsStr) {
         const roomsData = JSON.parse(roomsStr);
-        // Convert date strings back to Date objects
         roomsData.forEach((room: Room) => {
           room.createdAt = new Date(room.createdAt);
           if (room.lastAnalyzedAt) room.lastAnalyzedAt = new Date(room.lastAnalyzedAt);
@@ -124,11 +213,32 @@ export function DeclutterProvider({ children }: { children: ReactNode }) {
       }
 
       if (settingsStr) {
-        setSettingsState(JSON.parse(settingsStr));
+        const loadedSettings = JSON.parse(settingsStr);
+        setSettingsState({ ...defaultSettings, ...loadedSettings });
       }
 
       if (apiKey) {
         setGeminiApiKey(apiKey);
+      }
+
+      if (mascotStr) {
+        const mascotData = JSON.parse(mascotStr);
+        mascotData.lastFed = new Date(mascotData.lastFed);
+        mascotData.lastInteraction = new Date(mascotData.lastInteraction);
+        mascotData.createdAt = new Date(mascotData.createdAt);
+        setMascot(mascotData);
+      }
+
+      if (collectionStr) {
+        const collectionData = JSON.parse(collectionStr);
+        collectionData.forEach((item: CollectedItem) => {
+          item.collectedAt = new Date(item.collectedAt);
+        });
+        setCollection(collectionData);
+      }
+
+      if (collectionStatsStr) {
+        setCollectionStats(JSON.parse(collectionStatsStr));
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -144,6 +254,9 @@ export function DeclutterProvider({ children }: { children: ReactNode }) {
         AsyncStorage.setItem(STORAGE_KEYS.ROOMS, JSON.stringify(rooms)),
         AsyncStorage.setItem(STORAGE_KEYS.STATS, JSON.stringify(stats)),
         AsyncStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings)),
+        mascot ? AsyncStorage.setItem(STORAGE_KEYS.MASCOT, JSON.stringify(mascot)) : null,
+        AsyncStorage.setItem(STORAGE_KEYS.COLLECTION, JSON.stringify(collection)),
+        AsyncStorage.setItem(STORAGE_KEYS.COLLECTION_STATS, JSON.stringify(collectionStats)),
       ]);
     } catch (error) {
       console.error('Error saving data:', error);
@@ -155,7 +268,6 @@ export function DeclutterProvider({ children }: { children: ReactNode }) {
     const newBadges: Badge[] = [];
 
     BADGES.forEach(badge => {
-      // Skip if already unlocked
       if (updatedStats.badges.some(b => b.id === badge.id)) return;
 
       let shouldUnlock = false;
@@ -187,7 +299,10 @@ export function DeclutterProvider({ children }: { children: ReactNode }) {
     return Math.floor(xp / 100) + 1;
   }
 
-  // Actions
+  // =====================
+  // BASIC ACTIONS
+  // =====================
+
   const setUserAction = (newUser: UserProfile) => {
     setUser(newUser);
   };
@@ -256,15 +371,12 @@ export function DeclutterProvider({ children }: { children: ReactNode }) {
           };
         });
 
-        // Calculate new progress
         const completedCount = updatedTasks.filter(t => t.completed).length;
         const totalCount = updatedTasks.length;
         const newProgress = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
-        // Update stats if task was completed
         const task = room.tasks.find(t => t.id === taskId);
         if (task && !task.completed) {
-          // Task is being completed
           const newXp = stats.xp + 10;
           const updatedStats: UserStats = {
             ...stats,
@@ -274,7 +386,6 @@ export function DeclutterProvider({ children }: { children: ReactNode }) {
             level: calculateLevel(newXp),
           };
 
-          // Check for new badges
           const newBadges = checkBadges(updatedStats);
           if (newBadges.length > 0) {
             updatedStats.badges = [...updatedStats.badges, ...newBadges];
@@ -282,12 +393,32 @@ export function DeclutterProvider({ children }: { children: ReactNode }) {
 
           setStats(updatedStats);
 
-          // Check if room is complete
+          // Feed mascot when task is completed
+          if (mascot) {
+            feedMascotAction();
+          }
+
+          // Spawn collectible chance
+          if (settings.arCollectionEnabled) {
+            const spawn = spawnCollectibleAction();
+            if (spawn) {
+              setActiveSpawn(spawn);
+            }
+          }
+
+          // Update focus session
+          if (focusSession?.isActive) {
+            setFocusSession(prev => prev ? {
+              ...prev,
+              tasksCompletedDuringSession: prev.tasksCompletedDuringSession + 1,
+            } : null);
+          }
+
           if (newProgress === 100) {
             const roomStats: UserStats = {
               ...updatedStats,
               totalRoomsCleaned: updatedStats.totalRoomsCleaned + 1,
-              xp: updatedStats.xp + 50, // Bonus XP for completing room
+              xp: updatedStats.xp + 50,
             };
             roomStats.level = calculateLevel(roomStats.xp);
             const roomBadges = checkBadges(roomStats);
@@ -352,10 +483,7 @@ export function DeclutterProvider({ children }: { children: ReactNode }) {
 
   const endSession = () => {
     if (currentSession) {
-      // Update streak if tasks were completed
       if (currentSession.tasksCompletedIds.length > 0) {
-        const today = new Date().toDateString();
-        // Simple streak logic - in production, would need last active date
         setStats(prev => ({
           ...prev,
           currentStreak: prev.currentStreak + 1,
@@ -372,6 +500,231 @@ export function DeclutterProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // =====================
+  // MASCOT ACTIONS
+  // =====================
+
+  const createMascot = (name: string, personality: MascotPersonality) => {
+    const newMascot: Mascot = {
+      name,
+      personality,
+      mood: 'happy',
+      activity: 'idle',
+      level: 1,
+      xp: 0,
+      hunger: 100,
+      energy: 100,
+      happiness: 100,
+      lastFed: new Date(),
+      lastInteraction: new Date(),
+      createdAt: new Date(),
+      accessories: [],
+    };
+    setMascot(newMascot);
+  };
+
+  const updateMascotAction = (updates: Partial<Mascot>) => {
+    setMascot(prev => prev ? { ...prev, ...updates } : null);
+  };
+
+  const feedMascotAction = () => {
+    if (!mascot) return;
+
+    const newHunger = Math.min(100, mascot.hunger + 20);
+    const newHappiness = Math.min(100, mascot.happiness + 10);
+    const newXp = mascot.xp + 5;
+    const newLevel = Math.floor(newXp / 50) + 1;
+
+    setMascot(prev => prev ? {
+      ...prev,
+      hunger: newHunger,
+      happiness: newHappiness,
+      xp: newXp,
+      level: newLevel,
+      lastFed: new Date(),
+      mood: newHunger > 80 ? 'happy' : prev.mood,
+      activity: 'cheering',
+    } : null);
+
+    // Reset activity after animation
+    setTimeout(() => {
+      setMascot(prev => prev ? { ...prev, activity: 'idle' } : null);
+    }, 2000);
+  };
+
+  const interactWithMascot = () => {
+    if (!mascot) return;
+
+    const newHappiness = Math.min(100, mascot.happiness + 15);
+
+    setMascot(prev => prev ? {
+      ...prev,
+      happiness: newHappiness,
+      lastInteraction: new Date(),
+      activity: 'dancing',
+      mood: newHappiness > 70 ? 'excited' : prev.mood,
+    } : null);
+
+    setTimeout(() => {
+      setMascot(prev => prev ? { ...prev, activity: 'idle' } : null);
+    }, 3000);
+  };
+
+  // =====================
+  // FOCUS MODE ACTIONS
+  // =====================
+
+  const startFocusSession = (duration: number, roomId?: string) => {
+    const session: FocusSession = {
+      id: generateId(),
+      roomId,
+      startedAt: new Date(),
+      duration,
+      remainingSeconds: duration * 60,
+      isActive: true,
+      isPaused: false,
+      tasksCompletedDuringSession: 0,
+      blockedApps: [],
+      distractionAttempts: 0,
+    };
+    setFocusSession(session);
+
+    // Update mascot to cleaning mode
+    if (mascot) {
+      setMascot(prev => prev ? { ...prev, activity: 'cleaning' } : null);
+    }
+  };
+
+  const pauseFocusSession = () => {
+    setFocusSession(prev => prev ? {
+      ...prev,
+      isPaused: true,
+      pausedAt: new Date(),
+    } : null);
+  };
+
+  const resumeFocusSession = () => {
+    setFocusSession(prev => prev ? {
+      ...prev,
+      isPaused: false,
+      pausedAt: undefined,
+    } : null);
+  };
+
+  const endFocusSession = () => {
+    if (focusSession) {
+      // Grant bonus XP for focus sessions
+      const bonusXp = Math.floor((focusSession.duration * 60 - focusSession.remainingSeconds) / 60) * 2;
+      setStats(prev => ({
+        ...prev,
+        xp: prev.xp + bonusXp,
+        level: calculateLevel(prev.xp + bonusXp),
+      }));
+
+      // Mascot celebrates
+      if (mascot) {
+        setMascot(prev => prev ? { ...prev, activity: 'celebrating' } : null);
+        setTimeout(() => {
+          setMascot(prev => prev ? { ...prev, activity: 'idle' } : null);
+        }, 3000);
+      }
+    }
+    setFocusSession(null);
+  };
+
+  const updateFocusSessionAction = (updates: Partial<FocusSession>) => {
+    setFocusSession(prev => prev ? { ...prev, ...updates } : null);
+  };
+
+  // =====================
+  // COLLECTION ACTIONS
+  // =====================
+
+  const spawnCollectibleAction = useCallback((): SpawnEvent | null => {
+    if (!settings.arCollectionEnabled) return null;
+
+    // Get eligible collectibles based on tasks completed
+    const eligible = COLLECTIBLES.filter(c =>
+      !c.isSpecial &&
+      c.requiredTasks <= stats.totalTasksCompleted &&
+      c.spawnChance > 0
+    );
+
+    if (eligible.length === 0) return null;
+
+    // Roll for spawn
+    const roll = Math.random();
+    let cumulative = 0;
+
+    for (const collectible of eligible) {
+      cumulative += collectible.spawnChance;
+      if (roll <= cumulative) {
+        const spawn: SpawnEvent = {
+          collectible,
+          position: {
+            x: Math.random() * 0.6 + 0.2, // 20-80% of screen
+            y: Math.random() * 0.4 + 0.3, // 30-70% of screen
+          },
+          expiresAt: new Date(Date.now() + 30000), // 30 seconds to collect
+          collected: false,
+        };
+        return spawn;
+      }
+    }
+
+    return null;
+  }, [settings.arCollectionEnabled, stats.totalTasksCompleted]);
+
+  const collectItem = (collectibleId: string, roomId?: string, taskId?: string) => {
+    const collectible = COLLECTIBLES.find(c => c.id === collectibleId);
+    if (!collectible) return;
+
+    const newItem: CollectedItem = {
+      collectibleId,
+      collectedAt: new Date(),
+      roomId,
+      taskId,
+    };
+
+    setCollection(prev => [...prev, newItem]);
+
+    // Update collection stats
+    const isFirstOfKind = !collection.some(c => c.collectibleId === collectibleId);
+    setCollectionStats(prev => ({
+      ...prev,
+      totalCollected: prev.totalCollected + 1,
+      uniqueCollected: isFirstOfKind ? prev.uniqueCollected + 1 : prev.uniqueCollected,
+      commonCount: collectible.rarity === 'common' ? prev.commonCount + 1 : prev.commonCount,
+      uncommonCount: collectible.rarity === 'uncommon' ? prev.uncommonCount + 1 : prev.uncommonCount,
+      rareCount: collectible.rarity === 'rare' ? prev.rareCount + 1 : prev.rareCount,
+      epicCount: collectible.rarity === 'epic' ? prev.epicCount + 1 : prev.epicCount,
+      legendaryCount: collectible.rarity === 'legendary' ? prev.legendaryCount + 1 : prev.legendaryCount,
+      lastCollected: new Date(),
+    }));
+
+    // Grant XP
+    setStats(prev => ({
+      ...prev,
+      xp: prev.xp + collectible.xpValue,
+      level: calculateLevel(prev.xp + collectible.xpValue),
+    }));
+
+    // Clear active spawn
+    setActiveSpawn(null);
+
+    // Mascot gets excited
+    if (mascot) {
+      setMascot(prev => prev ? { ...prev, activity: 'cheering', mood: 'excited' } : null);
+      setTimeout(() => {
+        setMascot(prev => prev ? { ...prev, activity: 'idle' } : null);
+      }, 2000);
+    }
+  };
+
+  const dismissSpawn = () => {
+    setActiveSpawn(null);
+  };
+
   // Context value
   const value: DeclutterState = {
     user,
@@ -380,6 +733,11 @@ export function DeclutterProvider({ children }: { children: ReactNode }) {
     activeRoomId,
     currentSession,
     settings,
+    mascot,
+    focusSession,
+    collection,
+    collectionStats,
+    activeSpawn,
     isAnalyzing,
     analysisError,
     setUser: setUserAction,
@@ -398,9 +756,20 @@ export function DeclutterProvider({ children }: { children: ReactNode }) {
     setAnalyzing: setIsAnalyzing,
     setAnalysisError,
     completeOnboarding,
+    createMascot,
+    updateMascot: updateMascotAction,
+    feedMascot: feedMascotAction,
+    interactWithMascot,
+    startFocusSession,
+    pauseFocusSession,
+    resumeFocusSession,
+    endFocusSession,
+    updateFocusSession: updateFocusSessionAction,
+    collectItem,
+    spawnCollectible: spawnCollectibleAction,
+    dismissSpawn,
   };
 
-  // Don't render until data is loaded
   if (!isLoaded) {
     return null;
   }

@@ -1,11 +1,11 @@
 /**
  * Declutterly - Home Screen
- * Dashboard with room cards and quick actions
+ * Dashboard with room cards, mascot, and quick actions
  */
 
 import { Colors, RoomColors } from '@/constants/Colors';
 import { useDeclutter } from '@/context/DeclutterContext';
-import { Room, ROOM_TYPE_INFO, RoomType } from '@/types/declutter';
+import { Room, ROOM_TYPE_INFO, RoomType, MASCOT_PERSONALITIES } from '@/types/declutter';
 import {
   Button,
   Form,
@@ -25,9 +25,8 @@ import {
   frame,
   glassEffect,
 } from '@expo/ui/swift-ui/modifiers';
-import { GlassView } from 'expo-glass-effect';
 import { Image } from 'expo-image';
-import { Link, router } from 'expo-router';
+import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
   useColorScheme,
@@ -36,19 +35,32 @@ import {
   ScrollView,
   Pressable,
   RefreshControl,
+  Text as RNText,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
+import { Mascot } from '@/components/features/Mascot';
+import { CollectibleSpawn } from '@/components/features/CollectibleSpawn';
 
 export default function HomeScreen() {
   const rawColorScheme = useColorScheme();
   const colorScheme = rawColorScheme === 'dark' ? 'dark' : 'light';
   const colors = Colors[colorScheme];
-  const { user, rooms, stats, addRoom, setActiveRoom } = useDeclutter();
+  const {
+    user,
+    rooms,
+    stats,
+    addRoom,
+    setActiveRoom,
+    mascot,
+    activeSpawn,
+    dismissSpawn,
+    collectionStats,
+  } = useDeclutter();
   const [refreshing, setRefreshing] = useState(false);
   const [showAddRoom, setShowAddRoom] = useState(false);
 
   const onRefresh = () => {
     setRefreshing(true);
-    // Simulate refresh
     setTimeout(() => setRefreshing(false), 1000);
   };
 
@@ -72,6 +84,11 @@ export default function HomeScreen() {
     router.push(`/room/${room.id}`);
   };
 
+  const handleStartFocus = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    router.push('/focus?duration=25');
+  };
+
   // Calculate overall progress
   const totalProgress = rooms.length > 0
     ? Math.round(rooms.reduce((acc, r) => acc + r.currentProgress, 0) / rooms.length)
@@ -82,6 +99,15 @@ export default function HomeScreen() {
 
   return (
     <Host style={styles.container}>
+      {/* Collectible Spawn Overlay */}
+      {activeSpawn && (
+        <CollectibleSpawn
+          spawn={activeSpawn}
+          onCollect={() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)}
+          onDismiss={dismissSpawn}
+        />
+      )}
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -90,16 +116,61 @@ export default function HomeScreen() {
         }
       >
         <Form>
-          {/* Welcome Section */}
+          {/* Welcome Section with Mascot */}
           <Section title="">
-            <VStack spacing={4} alignment="leading">
-              <Text size={14} modifiers={[foregroundStyle(colors.textSecondary)]}>
-                Welcome back,
-              </Text>
-              <Text size={28} weight="bold">
-                {user?.name || 'Friend'} 👋
-              </Text>
-            </VStack>
+            <HStack spacing={16}>
+              <VStack spacing={4} alignment="leading">
+                <Text size={14} modifiers={[foregroundStyle(colors.textSecondary)]}>
+                  Welcome back,
+                </Text>
+                <Text size={28} weight="bold">
+                  {user?.name || 'Friend'} 👋
+                </Text>
+                <Text size={13} modifiers={[foregroundStyle(colors.primary)]}>
+                  Level {stats.level} • {stats.xp} XP
+                </Text>
+              </VStack>
+              <Spacer />
+              {mascot && (
+                <Pressable onPress={() => router.push('/mascot')}>
+                  <View style={styles.mascotMini}>
+                    <RNText style={styles.mascotEmoji}>
+                      {MASCOT_PERSONALITIES[mascot.personality].emoji}
+                    </RNText>
+                    <RNText style={[styles.mascotName, { color: colors.textSecondary }]}>
+                      {mascot.name}
+                    </RNText>
+                  </View>
+                </Pressable>
+              )}
+            </HStack>
+          </Section>
+
+          {/* Quick Actions */}
+          <Section title="Quick Actions">
+            <HStack spacing={12}>
+              <Pressable
+                style={[styles.quickAction, { backgroundColor: colors.primary }]}
+                onPress={() => router.push('/camera')}
+              >
+                <RNText style={styles.quickActionEmoji}>📸</RNText>
+                <RNText style={styles.quickActionText}>Capture</RNText>
+              </Pressable>
+              <Pressable
+                style={[styles.quickAction, { backgroundColor: colors.success }]}
+                onPress={handleStartFocus}
+              >
+                <RNText style={styles.quickActionEmoji}>⏱️</RNText>
+                <RNText style={styles.quickActionText}>Focus</RNText>
+              </Pressable>
+              <Pressable
+                style={[styles.quickAction, { backgroundColor: '#A855F7' }]}
+                onPress={() => router.push('/collection')}
+              >
+                <RNText style={styles.quickActionEmoji}>✨</RNText>
+                <RNText style={styles.quickActionText}>Collection</RNText>
+              </Pressable>
+            </HStack>
           </Section>
 
           {/* Stats Overview */}
@@ -126,24 +197,11 @@ export default function HomeScreen() {
                   <Text modifiers={[foregroundStyle(colors.textSecondary)]}>day streak 🔥</Text>
                 </HStack>
                 <HStack spacing={8}>
-                  <Text size={24} weight="bold">{stats.level}</Text>
-                  <Text modifiers={[foregroundStyle(colors.textSecondary)]}>level</Text>
+                  <Text size={24} weight="bold">{collectionStats.uniqueCollected}</Text>
+                  <Text modifiers={[foregroundStyle(colors.textSecondary)]}>items found</Text>
                 </HStack>
               </VStack>
             </HStack>
-          </Section>
-
-          {/* Quick Action */}
-          <Section title="">
-            <Button
-              label="📸 Capture a Space"
-              onPress={() => router.push('/camera')}
-              modifiers={[
-                buttonStyle('borderedProminent'),
-                controlSize('large'),
-                frame({ maxWidth: 400 }),
-              ]}
-            />
           </Section>
 
           {/* In Progress Rooms */}
@@ -171,6 +229,11 @@ export default function HomeScreen() {
                   onPress={() => handleRoomPress(room)}
                 />
               ))}
+              <Button
+                label="Add Another Room"
+                onPress={() => setShowAddRoom(true)}
+                modifiers={[buttonStyle('bordered'), controlSize('small')]}
+              />
             </Section>
           ) : (
             <Section title="🏠 Your Spaces">
@@ -227,7 +290,33 @@ export default function HomeScreen() {
             </Section>
           )}
 
-          {/* Motivation */}
+          {/* Mascot Section (if exists) */}
+          {mascot && (
+            <Section title="">
+              <Pressable onPress={() => router.push('/mascot')}>
+                <Group
+                  modifiers={[
+                    glassEffect({ glass: { variant: 'regular', interactive: true } }),
+                    frame({ minHeight: 100 }),
+                  ]}
+                >
+                  <HStack spacing={16}>
+                    <Mascot size="small" showStats={false} interactive={false} />
+                    <VStack spacing={4} alignment="leading">
+                      <Text size={16} weight="semibold">{mascot.name} says:</Text>
+                      <Text size={14} modifiers={[foregroundStyle(colors.textSecondary)]}>
+                        {getMascotMessage(mascot.mood, stats.currentStreak)}
+                      </Text>
+                    </VStack>
+                    <Spacer />
+                    <Text size={24}>❯</Text>
+                  </HStack>
+                </Group>
+              </Pressable>
+            </Section>
+          )}
+
+          {/* Motivation Quote */}
           <Section title="">
             <Group
               modifiers={[
@@ -251,6 +340,29 @@ export default function HomeScreen() {
   );
 }
 
+// Get mascot message based on mood
+function getMascotMessage(mood: string, streak: number): string {
+  if (streak >= 7) return "We're on fire! Keep it up!";
+  if (streak >= 3) return "Great streak going! You're doing amazing!";
+
+  switch (mood) {
+    case 'ecstatic':
+      return "I'm so happy we're cleaning together!";
+    case 'happy':
+      return "Ready to tackle some tasks? Let's go!";
+    case 'excited':
+      return "Ooh, what should we clean next?";
+    case 'content':
+      return "Nice and tidy! Want to do more?";
+    case 'neutral':
+      return "Hey there! Miss cleaning with you!";
+    case 'sad':
+      return "I miss you! Let's clean something together?";
+    default:
+      return "Let's make today sparkle!";
+  }
+}
+
 // Room Card Component
 function RoomCard({
   room,
@@ -261,19 +373,15 @@ function RoomCard({
   colors: typeof Colors.light;
   onPress: () => void;
 }) {
-  const roomColor = RoomColors[room.type] || RoomColors.other;
   const completedTasks = room.tasks.filter(t => t.completed).length;
   const totalTasks = room.tasks.length;
 
   return (
     <Pressable onPress={onPress}>
       <HStack spacing={12}>
-        {/* Room emoji/image */}
         <VStack
           alignment="center"
-          modifiers={[
-            frame({ width: 60, height: 60 }),
-          ]}
+          modifiers={[frame({ width: 60, height: 60 })]}
         >
           {room.photos.length > 0 ? (
             <Image
@@ -285,7 +393,6 @@ function RoomCard({
           )}
         </VStack>
 
-        {/* Room info */}
         <VStack spacing={4} alignment="leading">
           <Text size={17} weight="semibold">{room.name}</Text>
           <Text size={13} modifiers={[foregroundStyle(colors.textSecondary)]}>
@@ -297,7 +404,6 @@ function RoomCard({
 
         <Spacer />
 
-        {/* Progress indicator */}
         <Gauge
           current={{ value: room.currentProgress / 100 }}
           type="circular"
@@ -317,5 +423,30 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 100,
+  },
+  mascotMini: {
+    alignItems: 'center',
+  },
+  mascotEmoji: {
+    fontSize: 36,
+  },
+  mascotName: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  quickAction: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 16,
+    alignItems: 'center',
+  },
+  quickActionEmoji: {
+    fontSize: 24,
+  },
+  quickActionText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 4,
   },
 });
