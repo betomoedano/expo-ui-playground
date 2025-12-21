@@ -1,29 +1,12 @@
 /**
  * Declutterly - Onboarding Screen
- * Welcome flow with guest mode, sign-in options, and mascot selection
+ * Quick tutorial with guest mode and optional mascot selection
  */
 
 import { Colors } from '@/constants/Colors';
 import { useDeclutter, saveApiKey } from '@/context/DeclutterContext';
-import {
-  Button,
-  Form,
-  Host,
-  Section,
-  Text,
-  TextField,
-  VStack,
-  HStack,
-  Spacer,
-} from '@expo/ui/swift-ui';
-import {
-  buttonStyle,
-  controlSize,
-  foregroundStyle,
-  frame,
-} from '@expo/ui/swift-ui/modifiers';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   useColorScheme,
   View,
@@ -32,43 +15,41 @@ import {
   Pressable,
   Text as RNText,
   ScrollView,
-  Alert,
-  Linking,
+  Animated,
+  FlatList,
+  TextInput,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { MASCOT_PERSONALITIES, MascotPersonality } from '@/types/declutter';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
-// Onboarding slides content
-const slides = [
+// Short tutorial slides - just 3 quick steps
+const tutorialSlides = [
   {
-    title: 'Welcome to Declutterly',
-    subtitle: 'Your AI-powered cleaning companion',
-    description: 'Take control of your space with small, achievable steps. Perfect for busy minds and anyone who wants a calmer home.',
-    emoji: '✨',
-  },
-  {
-    title: 'Snap a Photo or Video',
-    subtitle: 'Show us your space',
-    description: 'Take a picture or video of any room that needs attention. Our AI analyzes it and creates a personalized plan.',
+    id: '1',
     emoji: '📸',
+    title: 'Snap a Photo',
+    description: 'Take a picture of any messy space',
+    tip: 'Works with photos AND videos!',
   },
   {
-    title: 'Get Your Cleaning Plan',
-    subtitle: 'AI breaks it down for you',
-    description: 'Receive step-by-step tasks with clear instructions, time estimates, and "Quick Wins" you can do in 2 minutes.',
-    emoji: '📋',
+    id: '2',
+    emoji: '🤖',
+    title: 'AI Creates Your Plan',
+    description: 'Get personalized step-by-step tasks',
+    tip: '"Quick wins" you can do in 2 minutes',
   },
   {
-    title: 'Track & Celebrate',
-    subtitle: 'Make cleaning fun!',
-    description: 'Earn XP, collect virtual rewards, level up your mascot, and watch your space transform!',
-    emoji: '🎮',
+    id: '3',
+    emoji: '✨',
+    title: 'Clean & Collect',
+    description: 'Complete tasks, earn XP, find rewards!',
+    tip: 'Your mascot cheers you on',
   },
 ];
 
-type OnboardingStep = 'welcome' | 'auth' | 'info' | 'mascot' | 'ready';
+type OnboardingStep = 'tutorial' | 'setup' | 'ready';
 
 export default function OnboardingScreen() {
   const rawColorScheme = useColorScheme();
@@ -76,805 +57,529 @@ export default function OnboardingScreen() {
   const colors = Colors[colorScheme];
   const { setUser, completeOnboarding, createMascot } = useDeclutter();
 
+  const [step, setStep] = useState<OnboardingStep>('tutorial');
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [step, setStep] = useState<OnboardingStep>('welcome');
   const [name, setName] = useState('');
-  const [apiKey, setApiKey] = useState('');
-  const [mascotName, setMascotName] = useState('');
-  const [selectedPersonality, setSelectedPersonality] = useState<MascotPersonality | null>(null);
-  const [isGuest, setIsGuest] = useState(false);
+  const [selectedMascot, setSelectedMascot] = useState<MascotPersonality>('spark');
+  const flatListRef = useRef<FlatList>(null);
+  const scrollX = useRef(new Animated.Value(0)).current;
 
-  const handleNext = () => {
-    if (currentSlide < slides.length - 1) {
-      setCurrentSlide(currentSlide + 1);
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    } else {
-      setStep('auth');
-    }
-  };
-
-  const handleGuestMode = () => {
-    setIsGuest(true);
-    setName('Guest');
-    setStep('info');
+  const handleTutorialComplete = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setStep('setup');
   };
 
-  const handleSignInPlaceholder = (provider: 'google' | 'apple' | 'email') => {
-    // Placeholder for future authentication
-    Alert.alert(
-      'Coming Soon',
-      `${provider === 'google' ? 'Google' : provider === 'apple' ? 'Apple' : 'Email'} sign-in will be available when Firebase is configured. For now, continue as a guest or enter your name to get started!`,
-      [
-        { text: 'Continue as Guest', onPress: handleGuestMode },
-        { text: 'Enter Name', onPress: () => setStep('info') },
-      ]
-    );
-  };
-
-  const handleInfoNext = async () => {
-    if (!name.trim()) {
-      Alert.alert('Name Required', 'Please enter your name to personalize your experience.');
-      return;
-    }
-
-    // Save API key if provided
-    if (apiKey.trim()) {
-      await saveApiKey(apiKey.trim());
-    }
-
-    setStep('mascot');
+  const handleSkipTutorial = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  };
-
-  const handleMascotNext = () => {
-    if (!selectedPersonality) {
-      Alert.alert('Choose a Buddy', 'Select a mascot personality to continue.');
-      return;
-    }
-
-    const finalMascotName = mascotName.trim() || MASCOT_PERSONALITIES[selectedPersonality].name;
-    createMascot(finalMascotName, selectedPersonality);
-
-    setStep('ready');
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setStep('setup');
   };
 
   const handleGetStarted = () => {
+    const finalName = name.trim() || 'Friend';
+
     // Create user profile
     setUser({
       id: `user-${Date.now()}`,
-      name: name.trim() || 'Guest',
+      name: finalName,
       createdAt: new Date(),
       onboardingComplete: true,
     });
 
+    // Create mascot with selected personality
+    const mascotInfo = MASCOT_PERSONALITIES[selectedMascot];
+    createMascot(mascotInfo.name, selectedMascot);
+
     completeOnboarding();
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     router.replace('/(tabs)');
   };
 
-  const handleSkipMascot = () => {
-    // Create default mascot
-    createMascot('Buddy', 'spark');
-    setStep('ready');
+  const handleSlideChange = (index: number) => {
+    setCurrentSlide(index);
+    Haptics.selectionAsync();
   };
 
-  // Auth Selection Step
-  if (step === 'auth') {
+  // Tutorial Step - Quick swipeable slides
+  if (step === 'tutorial') {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <ScrollView contentContainerStyle={styles.authContainer}>
-          <View style={styles.authHeader}>
-            <RNText style={styles.authEmoji}>🏠</RNText>
-            <RNText style={[styles.authTitle, { color: colors.text }]}>
-              Get Started
-            </RNText>
-            <RNText style={[styles.authSubtitle, { color: colors.textSecondary }]}>
-              Sign in to sync across devices, or continue as a guest
-            </RNText>
-          </View>
+        {/* Skip button */}
+        <Pressable style={styles.skipButton} onPress={handleSkipTutorial}>
+          <RNText style={[styles.skipText, { color: colors.textSecondary }]}>
+            Skip
+          </RNText>
+        </Pressable>
 
-          {/* Auth Options */}
-          <View style={styles.authOptions}>
-            {/* Guest Mode - Primary */}
-            <Pressable
-              style={[styles.authButton, styles.guestButton, { borderColor: colors.primary }]}
-              onPress={handleGuestMode}
-            >
-              <RNText style={styles.authButtonEmoji}>👤</RNText>
-              <View style={styles.authButtonContent}>
-                <RNText style={[styles.authButtonTitle, { color: colors.text }]}>
-                  Continue as Guest
+        {/* Tutorial slides */}
+        <FlatList
+          ref={flatListRef}
+          data={tutorialSlides}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onScroll={Animated.event(
+            [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+            { useNativeDriver: false }
+          )}
+          onMomentumScrollEnd={(e) => {
+            const index = Math.round(e.nativeEvent.contentOffset.x / width);
+            handleSlideChange(index);
+          }}
+          renderItem={({ item, index }) => (
+            <View style={[styles.slide, { width }]}>
+              <View style={styles.slideContent}>
+                {/* Step indicator */}
+                <View style={[styles.stepBadge, { backgroundColor: colors.primary + '20' }]}>
+                  <RNText style={[styles.stepText, { color: colors.primary }]}>
+                    Step {index + 1} of 3
+                  </RNText>
+                </View>
+
+                {/* Main illustration */}
+                <View style={styles.illustrationContainer}>
+                  <RNText style={styles.slideEmoji}>{item.emoji}</RNText>
+                  <View style={styles.decorativeElements}>
+                    <RNText style={styles.decorative1}>✨</RNText>
+                    <RNText style={styles.decorative2}>⭐</RNText>
+                  </View>
+                </View>
+
+                {/* Content */}
+                <RNText style={[styles.slideTitle, { color: colors.text }]}>
+                  {item.title}
                 </RNText>
-                <RNText style={[styles.authButtonDesc, { color: colors.textSecondary }]}>
-                  Start immediately, data saved locally
+                <RNText style={[styles.slideDescription, { color: colors.textSecondary }]}>
+                  {item.description}
                 </RNText>
+
+                {/* Tip */}
+                <View style={[styles.tipBox, { backgroundColor: colors.primary + '15' }]}>
+                  <RNText style={[styles.tipText, { color: colors.primary }]}>
+                    💡 {item.tip}
+                  </RNText>
+                </View>
               </View>
-              <RNText style={[styles.authArrow, { color: colors.primary }]}>→</RNText>
-            </Pressable>
-
-            <View style={styles.divider}>
-              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-              <RNText style={[styles.dividerText, { color: colors.textSecondary }]}>
-                or sign in
-              </RNText>
-              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
             </View>
+          )}
+          keyExtractor={(item) => item.id}
+        />
 
-            {/* Google Sign In */}
-            <Pressable
-              style={[styles.authButton, { backgroundColor: colors.card, borderColor: colors.border }]}
-              onPress={() => handleSignInPlaceholder('google')}
-            >
-              <RNText style={styles.authButtonEmoji}>🔵</RNText>
-              <View style={styles.authButtonContent}>
-                <RNText style={[styles.authButtonTitle, { color: colors.text }]}>
-                  Continue with Google
-                </RNText>
-              </View>
-            </Pressable>
-
-            {/* Apple Sign In */}
-            <Pressable
-              style={[styles.authButton, { backgroundColor: colors.card, borderColor: colors.border }]}
-              onPress={() => handleSignInPlaceholder('apple')}
-            >
-              <RNText style={styles.authButtonEmoji}>🍎</RNText>
-              <View style={styles.authButtonContent}>
-                <RNText style={[styles.authButtonTitle, { color: colors.text }]}>
-                  Continue with Apple
-                </RNText>
-              </View>
-            </Pressable>
-
-            {/* Email Sign In */}
-            <Pressable
-              style={[styles.authButton, { backgroundColor: colors.card, borderColor: colors.border }]}
-              onPress={() => handleSignInPlaceholder('email')}
-            >
-              <RNText style={styles.authButtonEmoji}>📧</RNText>
-              <View style={styles.authButtonContent}>
-                <RNText style={[styles.authButtonTitle, { color: colors.text }]}>
-                  Sign in with Email
-                </RNText>
-              </View>
-            </Pressable>
-          </View>
-
-          {/* Privacy Note */}
-          <View style={styles.privacyNote}>
-            <RNText style={[styles.privacyText, { color: colors.textSecondary }]}>
-              By continuing, you agree to our Terms of Service and Privacy Policy.
-              Your data is stored securely and never shared.
-            </RNText>
-          </View>
-
-          {/* Back Button */}
-          <Pressable onPress={() => setStep('welcome')} style={styles.backLink}>
-            <RNText style={[styles.backLinkText, { color: colors.primary }]}>
-              ← Back to intro
-            </RNText>
-          </Pressable>
-        </ScrollView>
-      </View>
-    );
-  }
-
-  // Setup Step: User Info
-  if (step === 'info') {
-    return (
-      <Host style={styles.container}>
-        <Form>
-          <Section title="">
-            <VStack spacing={24} alignment="center">
-              <Text size={60}>👋</Text>
-              <Text size={28} weight="bold">
-                {isGuest ? "Quick Setup" : "Let's Get Started!"}
-              </Text>
-              <Text
-                size={16}
-                modifiers={[foregroundStyle(colors.textSecondary)]}
-              >
-                {isGuest
-                  ? "You can add a name later. Let's keep it simple!"
-                  : "Tell us your name to personalize your experience"
-                }
-              </Text>
-            </VStack>
-          </Section>
-
-          <Section title="Your Name">
-            <TextField
-              placeholder="What should we call you?"
-              defaultValue={isGuest ? '' : name}
-              onChangeText={setName}
-            />
-            {isGuest && (
-              <Text
-                size={13}
-                modifiers={[foregroundStyle(colors.textSecondary)]}
-              >
-                Optional - you can skip and use "Guest"
-              </Text>
-            )}
-          </Section>
-
-          <Section title="AI Setup (Optional)">
-            <TextField
-              placeholder="Gemini API key for AI features"
-              defaultValue={apiKey}
-              onChangeText={setApiKey}
-            />
-            <VStack spacing={8}>
-              <Text
-                size={13}
-                modifiers={[foregroundStyle(colors.textSecondary)]}
-              >
-                The AI analyzes your photos and creates personalized cleaning tasks.
-              </Text>
-              <Button
-                label="Get Free API Key →"
-                onPress={() => Linking.openURL('https://ai.google.dev/')}
-                modifiers={[buttonStyle('plain'), controlSize('small')]}
-              />
-            </VStack>
-          </Section>
-
-          <Section title="">
-            <VStack spacing={12}>
-              <Button
-                label="Next: Choose Your Buddy!"
-                onPress={handleInfoNext}
-                modifiers={[
-                  buttonStyle('borderedProminent'),
-                  controlSize('large'),
-                  frame({ maxWidth: 400 }),
-                ]}
-              />
-              {isGuest && (
-                <Button
-                  label="Skip - Just call me Guest"
-                  onPress={() => {
-                    setName('Guest');
-                    handleInfoNext();
-                  }}
-                  modifiers={[buttonStyle('plain')]}
-                />
-              )}
-            </VStack>
-          </Section>
-        </Form>
-      </Host>
-    );
-  }
-
-  // Setup Step: Mascot Selection
-  if (step === 'mascot') {
-    return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <ScrollView contentContainerStyle={styles.mascotContainer}>
-          <View style={styles.mascotHeader}>
-            <RNText style={[styles.mascotTitle, { color: colors.text }]}>
-              Choose Your Buddy!
-            </RNText>
-            <RNText style={[styles.mascotSubtitle, { color: colors.textSecondary }]}>
-              Your cleaning companion will cheer you on and celebrate your wins
-            </RNText>
-          </View>
-
-          {/* Personality Selection */}
-          <View style={styles.personalityGrid}>
-            {(Object.keys(MASCOT_PERSONALITIES) as MascotPersonality[]).map(personality => {
-              const info = MASCOT_PERSONALITIES[personality];
-              const isSelected = selectedPersonality === personality;
+        {/* Pagination & Button */}
+        <View style={styles.bottomSection}>
+          {/* Dots */}
+          <View style={styles.pagination}>
+            {tutorialSlides.map((_, index) => {
+              const inputRange = [(index - 1) * width, index * width, (index + 1) * width];
+              const dotWidth = scrollX.interpolate({
+                inputRange,
+                outputRange: [8, 24, 8],
+                extrapolate: 'clamp',
+              });
+              const opacity = scrollX.interpolate({
+                inputRange,
+                outputRange: [0.3, 1, 0.3],
+                extrapolate: 'clamp',
+              });
 
               return (
-                <Pressable
-                  key={personality}
-                  onPress={() => {
-                    setSelectedPersonality(personality);
-                    Haptics.selectionAsync();
-                  }}
+                <Animated.View
+                  key={index}
                   style={[
-                    styles.personalityCard,
+                    styles.dot,
                     {
-                      backgroundColor: isSelected ? info.color + '30' : colors.card,
-                      borderColor: isSelected ? info.color : colors.border,
-                      borderWidth: isSelected ? 3 : 1,
+                      width: dotWidth,
+                      opacity,
+                      backgroundColor: colors.primary,
                     },
                   ]}
-                >
-                  <RNText style={styles.personalityEmoji}>{info.emoji}</RNText>
-                  <RNText style={[styles.personalityName, { color: colors.text }]}>
-                    {info.name}
-                  </RNText>
-                  <RNText style={[styles.personalityDesc, { color: colors.textSecondary }]}>
-                    {info.description}
-                  </RNText>
-                  {isSelected && (
-                    <View style={[styles.selectedBadge, { backgroundColor: info.color }]}>
-                      <RNText style={styles.selectedText}>Selected!</RNText>
-                    </View>
-                  )}
-                </Pressable>
+                />
               );
             })}
           </View>
 
-          {/* Mascot Name Input */}
-          {selectedPersonality && (
-            <View style={styles.nameInputContainer}>
-              <RNText style={[styles.nameLabel, { color: colors.text }]}>
-                Name your buddy:
-              </RNText>
-              <View style={[styles.nameInput, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <RNText style={styles.nameEmoji}>
-                  {MASCOT_PERSONALITIES[selectedPersonality].emoji}
-                </RNText>
-                <RNText
-                  style={[styles.nameInputText, { color: colors.text }]}
-                  numberOfLines={1}
-                >
-                  {mascotName || 'Enter a name...'}
-                </RNText>
-              </View>
-              <Host>
-                <TextField
-                  placeholder="Give your buddy a name"
-                  defaultValue={mascotName}
-                  onChangeText={setMascotName}
-                />
-              </Host>
-            </View>
-          )}
-
-          {/* Action Buttons */}
-          <View style={styles.mascotButtons}>
+          {/* Action Button */}
+          {currentSlide === tutorialSlides.length - 1 ? (
             <Pressable
-              style={[
-                styles.primaryButton,
-                {
-                  backgroundColor: selectedPersonality && mascotName.trim()
-                    ? colors.primary
-                    : colors.border,
-                },
-              ]}
-              onPress={handleMascotNext}
-              disabled={!selectedPersonality || !mascotName.trim()}
+              style={[styles.primaryButton, { backgroundColor: colors.primary }]}
+              onPress={handleTutorialComplete}
             >
-              <RNText style={styles.primaryButtonText}>
-                Continue with {mascotName || 'Buddy'}!
+              <RNText style={styles.primaryButtonText}>Let's Go! 🚀</RNText>
+            </Pressable>
+          ) : (
+            <Pressable
+              style={[styles.secondaryButton, { borderColor: colors.primary }]}
+              onPress={() => {
+                flatListRef.current?.scrollToIndex({ index: currentSlide + 1 });
+              }}
+            >
+              <RNText style={[styles.secondaryButtonText, { color: colors.primary }]}>
+                Next →
               </RNText>
             </Pressable>
-
-            <Pressable onPress={handleSkipMascot} style={styles.skipButton}>
-              <RNText style={[styles.skipText, { color: colors.textSecondary }]}>
-                Skip for now
-              </RNText>
-            </Pressable>
-          </View>
-        </ScrollView>
-      </View>
-    );
-  }
-
-  // Setup Step: Ready to Go
-  if (step === 'ready') {
-    return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={styles.readyContainer}>
-          <RNText style={styles.readyEmoji}>🎉</RNText>
-          <RNText style={[styles.readyTitle, { color: colors.text }]}>
-            You're All Set, {name}!
-          </RNText>
-          {selectedPersonality && mascotName && (
-            <View style={styles.mascotPreview}>
-              <RNText style={styles.previewEmoji}>
-                {MASCOT_PERSONALITIES[selectedPersonality].emoji}
-              </RNText>
-              <RNText style={[styles.previewText, { color: colors.textSecondary }]}>
-                {mascotName} is excited to help you declutter!
-              </RNText>
-            </View>
           )}
-          <RNText style={[styles.readySubtitle, { color: colors.textSecondary }]}>
-            Time to transform your space into a calm, organized haven.
-          </RNText>
-
-          <View style={styles.featureList}>
-            <FeatureItem emoji="📸" text="Snap photos of messy spaces" colors={colors} />
-            <FeatureItem emoji="🤖" text="Get AI-powered task lists" colors={colors} />
-            <FeatureItem emoji="✅" text="Complete small, easy tasks" colors={colors} />
-            <FeatureItem emoji="🎮" text="Collect items & earn XP" colors={colors} />
-            <FeatureItem emoji="🏆" text="Level up & unlock badges" colors={colors} />
-          </View>
-
-          <Pressable
-            style={[styles.startButton, { backgroundColor: colors.primary }]}
-            onPress={handleGetStarted}
-          >
-            <RNText style={styles.startButtonText}>Start Decluttering!</RNText>
-          </Pressable>
         </View>
       </View>
     );
   }
 
-  // Intro Slides
-  const slide = slides[currentSlide];
+  // Setup Step - Quick name + mascot selection
+  if (step === 'setup') {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <ScrollView contentContainerStyle={styles.setupContainer}>
+          {/* Header */}
+          <View style={styles.setupHeader}>
+            <RNText style={styles.waveEmoji}>👋</RNText>
+            <RNText style={[styles.setupTitle, { color: colors.text }]}>
+              Quick Setup
+            </RNText>
+            <RNText style={[styles.setupSubtitle, { color: colors.textSecondary }]}>
+              Just two things and you're ready!
+            </RNText>
+          </View>
 
-  return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Host style={styles.host}>
-        <VStack spacing={32} alignment="center">
-          <Spacer />
-
-          {/* Emoji/Icon */}
-          <Text size={80}>{slide.emoji}</Text>
-
-          {/* Title */}
-          <VStack spacing={8} alignment="center">
-            <Text size={28} weight="bold">
-              {slide.title}
-            </Text>
-            <Text
-              size={18}
-              modifiers={[foregroundStyle(colors.primary)]}
-              weight="semibold"
-            >
-              {slide.subtitle}
-            </Text>
-          </VStack>
-
-          {/* Description */}
-          <Text
-            size={16}
-            modifiers={[
-              foregroundStyle(colors.textSecondary),
-              frame({ maxWidth: 300 }),
-            ]}
-          >
-            {slide.description}
-          </Text>
-
-          <Spacer />
-
-          {/* Pagination dots */}
-          <HStack spacing={8}>
-            {slides.map((_, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.dot,
-                  {
-                    backgroundColor:
-                      index === currentSlide ? colors.primary : colors.border,
-                  },
-                ]}
-              />
-            ))}
-          </HStack>
-
-          {/* Buttons */}
-          <VStack spacing={12}>
-            <Button
-              label={currentSlide === slides.length - 1 ? "Let's Go!" : 'Next'}
-              onPress={handleNext}
-              modifiers={[
-                buttonStyle('borderedProminent'),
-                controlSize('large'),
-                frame({ width: 200 }),
+          {/* Name Input */}
+          <View style={styles.inputSection}>
+            <RNText style={[styles.inputLabel, { color: colors.text }]}>
+              What should we call you?
+            </RNText>
+            <TextInput
+              style={[
+                styles.nameInput,
+                {
+                  backgroundColor: colors.card,
+                  borderColor: colors.border,
+                  color: colors.text,
+                },
               ]}
+              placeholder="Your name (optional)"
+              placeholderTextColor={colors.textSecondary}
+              value={name}
+              onChangeText={setName}
+              autoCapitalize="words"
+              returnKeyType="done"
             />
+          </View>
 
-            {currentSlide > 0 && (
-              <Button
-                label="Back"
-                onPress={() => setCurrentSlide(currentSlide - 1)}
-                modifiers={[
-                  buttonStyle('plain'),
-                  controlSize('regular'),
-                ]}
-              />
-            )}
+          {/* Mascot Selection */}
+          <View style={styles.mascotSection}>
+            <RNText style={[styles.inputLabel, { color: colors.text }]}>
+              Pick your cleaning buddy
+            </RNText>
+            <View style={styles.mascotGrid}>
+              {(Object.keys(MASCOT_PERSONALITIES) as MascotPersonality[]).map((personality) => {
+                const info = MASCOT_PERSONALITIES[personality];
+                const isSelected = selectedMascot === personality;
 
-            {currentSlide === 0 && (
-              <Button
-                label="Skip"
-                onPress={() => setShowSetup(true)}
-                modifiers={[
-                  buttonStyle('plain'),
-                  foregroundStyle(colors.textSecondary),
-                ]}
-              />
-            )}
-          </VStack>
+                return (
+                  <Pressable
+                    key={personality}
+                    onPress={() => {
+                      setSelectedMascot(personality);
+                      Haptics.selectionAsync();
+                    }}
+                    style={[
+                      styles.mascotCard,
+                      {
+                        backgroundColor: isSelected ? info.color + '25' : colors.card,
+                        borderColor: isSelected ? info.color : colors.border,
+                        borderWidth: isSelected ? 2 : 1,
+                      },
+                    ]}
+                  >
+                    <RNText style={styles.mascotEmoji}>{info.emoji}</RNText>
+                    <RNText
+                      style={[
+                        styles.mascotName,
+                        { color: isSelected ? info.color : colors.text },
+                      ]}
+                    >
+                      {info.name}
+                    </RNText>
+                    {isSelected && (
+                      <View style={[styles.checkBadge, { backgroundColor: info.color }]}>
+                        <RNText style={styles.checkText}>✓</RNText>
+                      </View>
+                    )}
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
 
-          <Spacer />
-        </VStack>
-      </Host>
-    </View>
-  );
-}
+          {/* Selected mascot preview */}
+          <View style={[styles.previewCard, { backgroundColor: colors.card }]}>
+            <RNText style={styles.previewEmoji}>
+              {MASCOT_PERSONALITIES[selectedMascot].emoji}
+            </RNText>
+            <View style={styles.previewText}>
+              <RNText style={[styles.previewTitle, { color: colors.text }]}>
+                {MASCOT_PERSONALITIES[selectedMascot].name} is ready!
+              </RNText>
+              <RNText style={[styles.previewDesc, { color: colors.textSecondary }]}>
+                {MASCOT_PERSONALITIES[selectedMascot].description}
+              </RNText>
+            </View>
+          </View>
 
-function FeatureItem({ emoji, text, colors }: { emoji: string; text: string; colors: any }) {
-  return (
-    <View style={styles.featureItem}>
-      <RNText style={styles.featureEmoji}>{emoji}</RNText>
-      <RNText style={[styles.featureText, { color: colors.text }]}>{text}</RNText>
-    </View>
-  );
+          {/* Start Button */}
+          <Pressable
+            style={[styles.startButton, { backgroundColor: colors.primary }]}
+            onPress={handleGetStarted}
+          >
+            <RNText style={styles.startButtonText}>
+              Start Decluttering! ✨
+            </RNText>
+          </Pressable>
+
+          {/* Privacy note */}
+          <RNText style={[styles.privacyNote, { color: colors.textSecondary }]}>
+            Your data is stored locally on your device.
+            {'\n'}No account required!
+          </RNText>
+        </ScrollView>
+      </View>
+    );
+  }
+
+  return null;
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  host: {
+  // Skip button
+  skipButton: {
+    position: 'absolute',
+    top: 60,
+    right: 24,
+    zIndex: 10,
+    padding: 8,
+  },
+  skipText: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  // Slide styles
+  slide: {
     flex: 1,
-    paddingHorizontal: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  slideContent: {
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
+  stepBadge: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginBottom: 32,
+  },
+  stepText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  illustrationContainer: {
+    position: 'relative',
+    marginBottom: 32,
+  },
+  slideEmoji: {
+    fontSize: 100,
+  },
+  decorativeElements: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  decorative1: {
+    position: 'absolute',
+    top: -10,
+    right: -20,
+    fontSize: 28,
+  },
+  decorative2: {
+    position: 'absolute',
+    bottom: 0,
+    left: -25,
+    fontSize: 24,
+  },
+  slideTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  slideDescription: {
+    fontSize: 18,
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 26,
+  },
+  tipBox: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 16,
+  },
+  tipText: {
+    fontSize: 15,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  // Bottom section
+  bottomSection: {
+    paddingHorizontal: 32,
+    paddingBottom: 48,
+    alignItems: 'center',
+  },
+  pagination: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 32,
+    gap: 8,
   },
   dot: {
-    width: 8,
     height: 8,
     borderRadius: 4,
   },
-  // Auth Screen Styles
-  authContainer: {
-    paddingHorizontal: 24,
-    paddingTop: 80,
-    paddingBottom: 40,
-  },
-  authHeader: {
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  authEmoji: {
-    fontSize: 64,
-    marginBottom: 16,
-  },
-  authTitle: {
-    fontSize: 28,
-    fontWeight: '700',
-    marginBottom: 8,
-  },
-  authSubtitle: {
-    fontSize: 16,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  authOptions: {
-    gap: 12,
-    marginBottom: 32,
-  },
-  authButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1.5,
-  },
-  guestButton: {
-    backgroundColor: 'rgba(99, 102, 241, 0.08)',
-    borderWidth: 2,
-  },
-  authButtonEmoji: {
-    fontSize: 24,
-    marginRight: 12,
-  },
-  authButtonContent: {
-    flex: 1,
-  },
-  authButtonTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  authButtonDesc: {
-    fontSize: 13,
-    marginTop: 2,
-  },
-  authArrow: {
-    fontSize: 20,
-    fontWeight: '600',
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 8,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-  },
-  dividerText: {
-    fontSize: 13,
-    marginHorizontal: 16,
-  },
-  privacyNote: {
-    paddingHorizontal: 16,
-    marginBottom: 24,
-  },
-  privacyText: {
-    fontSize: 12,
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-  backLink: {
-    alignItems: 'center',
-    padding: 12,
-  },
-  backLinkText: {
-    fontSize: 15,
-    fontWeight: '500',
-  },
-  // Mascot Screen Styles
-  mascotContainer: {
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 40,
-  },
-  mascotHeader: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  mascotTitle: {
-    fontSize: 28,
-    fontWeight: '700',
-  },
-  mascotSubtitle: {
-    fontSize: 15,
-    textAlign: 'center',
-    marginTop: 8,
-    paddingHorizontal: 20,
-  },
-  personalityGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: 12,
-    marginBottom: 24,
-  },
-  personalityCard: {
-    width: (width - 52) / 2,
-    padding: 16,
-    borderRadius: 16,
-    alignItems: 'center',
-  },
-  personalityEmoji: {
-    fontSize: 48,
-  },
-  personalityName: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginTop: 8,
-  },
-  personalityDesc: {
-    fontSize: 12,
-    textAlign: 'center',
-    marginTop: 4,
-  },
-  selectedBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  selectedText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  nameInputContainer: {
-    marginBottom: 24,
-  },
-  nameLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  nameInput: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: 12,
-  },
-  nameEmoji: {
-    fontSize: 24,
-    marginRight: 12,
-  },
-  nameInputText: {
-    fontSize: 16,
-  },
-  mascotButtons: {
-    alignItems: 'center',
-    gap: 12,
-  },
   primaryButton: {
     width: '100%',
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingVertical: 18,
+    borderRadius: 16,
     alignItems: 'center',
   },
   primaryButtonText: {
     color: '#fff',
-    fontSize: 17,
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  secondaryButton: {
+    width: '100%',
+    paddingVertical: 18,
+    borderRadius: 16,
+    alignItems: 'center',
+    borderWidth: 2,
+  },
+  secondaryButtonText: {
+    fontSize: 18,
     fontWeight: '600',
   },
-  skipButton: {
-    padding: 12,
-  },
-  skipText: {
-    fontSize: 15,
-  },
-  readyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+  // Setup styles
+  setupContainer: {
     paddingHorizontal: 24,
+    paddingTop: 80,
+    paddingBottom: 40,
   },
-  readyEmoji: {
-    fontSize: 80,
+  setupHeader: {
+    alignItems: 'center',
+    marginBottom: 40,
   },
-  readyTitle: {
+  waveEmoji: {
+    fontSize: 64,
+    marginBottom: 16,
+  },
+  setupTitle: {
     fontSize: 28,
     fontWeight: '700',
-    marginTop: 16,
-    textAlign: 'center',
+    marginBottom: 8,
   },
-  mascotPreview: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.05)',
-    borderRadius: 20,
-  },
-  previewEmoji: {
-    fontSize: 24,
-    marginRight: 8,
-  },
-  previewText: {
-    fontSize: 14,
-  },
-  readySubtitle: {
+  setupSubtitle: {
     fontSize: 16,
     textAlign: 'center',
-    marginTop: 12,
-    paddingHorizontal: 20,
   },
-  featureList: {
-    marginTop: 32,
+  inputSection: {
+    marginBottom: 32,
+  },
+  inputLabel: {
+    fontSize: 17,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  nameInput: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    fontSize: 17,
+  },
+  mascotSection: {
+    marginBottom: 24,
+  },
+  mascotGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 12,
-    width: '100%',
-    maxWidth: 300,
   },
-  featureItem: {
+  mascotCard: {
+    width: (width - 72) / 3,
+    paddingVertical: 16,
+    borderRadius: 16,
+    alignItems: 'center',
+    position: 'relative',
+  },
+  mascotEmoji: {
+    fontSize: 36,
+  },
+  mascotName: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: 6,
+  },
+  checkBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  previewCard: {
     flexDirection: 'row',
     alignItems: 'center',
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 32,
   },
-  featureEmoji: {
-    fontSize: 20,
-    marginRight: 12,
-    width: 30,
-    textAlign: 'center',
+  previewEmoji: {
+    fontSize: 40,
+    marginRight: 16,
   },
-  featureText: {
-    fontSize: 15,
+  previewText: {
+    flex: 1,
+  },
+  previewTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  previewDesc: {
+    fontSize: 14,
+    lineHeight: 20,
   },
   startButton: {
-    marginTop: 32,
-    paddingVertical: 16,
-    paddingHorizontal: 48,
-    borderRadius: 30,
+    paddingVertical: 18,
+    borderRadius: 16,
+    alignItems: 'center',
+    marginBottom: 24,
   },
   startButtonText: {
     color: '#fff',
     fontSize: 18,
     fontWeight: '700',
+  },
+  privacyNote: {
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });
