@@ -164,6 +164,98 @@ export default function SettingsScreen() {
             </HStack>
           </Section>
 
+          {/* Focus Mode */}
+          <Section title="Focus Mode">
+            <HStack>
+              <Text>Strict Mode</Text>
+              <Spacer />
+              <Switch
+                value={settings.focusMode.strictMode}
+                onValueChange={(value) =>
+                  updateSettings({
+                    focusMode: { ...settings.focusMode, strictMode: value },
+                  })
+                }
+              />
+            </HStack>
+
+            <HStack>
+              <Text>Motivational Quotes</Text>
+              <Spacer />
+              <Switch
+                value={settings.focusMode.showMotivationalQuotes}
+                onValueChange={(value) =>
+                  updateSettings({
+                    focusMode: { ...settings.focusMode, showMotivationalQuotes: value },
+                  })
+                }
+              />
+            </HStack>
+
+            <HStack>
+              <Text>Auto-start Breaks</Text>
+              <Spacer />
+              <Switch
+                value={settings.focusMode.autoStartBreak}
+                onValueChange={(value) =>
+                  updateSettings({
+                    focusMode: { ...settings.focusMode, autoStartBreak: value },
+                  })
+                }
+              />
+            </HStack>
+
+            <HStack>
+              <Text>Block Notifications</Text>
+              <Spacer />
+              <Switch
+                value={settings.focusMode.blockNotifications}
+                onValueChange={(value) =>
+                  updateSettings({
+                    focusMode: { ...settings.focusMode, blockNotifications: value },
+                  })
+                }
+              />
+            </HStack>
+
+            <VStack spacing={4} alignment="leading">
+              <Text size={12} modifiers={[foregroundStyle(colors.textSecondary)]}>
+                Strict mode warns you when leaving the app
+              </Text>
+            </VStack>
+          </Section>
+
+          {/* Collection & Gamification */}
+          <Section title="Collection">
+            <HStack>
+              <Text>AR Collectibles</Text>
+              <Spacer />
+              <Switch
+                value={settings.arCollectionEnabled}
+                onValueChange={(value) =>
+                  updateSettings({ arCollectionEnabled: value })
+                }
+              />
+            </HStack>
+
+            <HStack>
+              <Text>Collectible Notifications</Text>
+              <Spacer />
+              <Switch
+                value={settings.collectibleNotifications}
+                onValueChange={(value) =>
+                  updateSettings({ collectibleNotifications: value })
+                }
+              />
+            </HStack>
+
+            <VStack spacing={4} alignment="leading">
+              <Text size={12} modifiers={[foregroundStyle(colors.textSecondary)]}>
+                Earn virtual collectibles when completing tasks
+              </Text>
+            </VStack>
+          </Section>
+
           {/* ADHD-Friendly Options */}
           <Section title="ADHD-Friendly Options">
             <Picker
