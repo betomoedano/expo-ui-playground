@@ -192,7 +192,41 @@ export default function CollectionScreen() {
         ))}
       </ScrollView>
 
+      {/* Empty State */}
+      {collectionStats.totalCollected === 0 && (
+        <View style={[styles.emptyStateContainer, { backgroundColor: colors.background }]}>
+          <View style={styles.emptyStateContent}>
+            <View style={styles.emptyStateIllustration}>
+              <RNText style={styles.emptyStateMainEmoji}>🎁</RNText>
+              <View style={styles.emptyStateFloatingEmojis}>
+                <RNText style={styles.floatingEmoji1}>✨</RNText>
+                <RNText style={styles.floatingEmoji2}>⭐</RNText>
+                <RNText style={styles.floatingEmoji3}>💫</RNText>
+              </View>
+            </View>
+            <RNText style={[styles.emptyStateTitle, { color: colors.text }]}>
+              Start Your Collection!
+            </RNText>
+            <RNText style={[styles.emptyStateSubtitle, { color: colors.textSecondary }]}>
+              Complete cleaning tasks to discover rare collectibles. Each task has a chance to spawn magical items!
+            </RNText>
+            <View style={[styles.emptyStateTip, { backgroundColor: colors.primary + '15' }]}>
+              <RNText style={[styles.emptyStateTipText, { color: colors.primary }]}>
+                💡 Complete your first task to unlock collectible spawns
+              </RNText>
+            </View>
+            <Pressable
+              style={[styles.emptyStateCTA, { backgroundColor: colors.primary }]}
+              onPress={() => router.push('/camera')}
+            >
+              <RNText style={styles.emptyStateCTAText}>Start Cleaning</RNText>
+            </Pressable>
+          </View>
+        </View>
+      )}
+
       {/* Collection Grid */}
+      {collectionStats.totalCollected > 0 && (
       <ScrollView style={styles.gridScroll} contentContainerStyle={styles.gridContent}>
         <View style={styles.grid}>
           {filteredCollectibles.map(item => {
@@ -233,6 +267,7 @@ export default function CollectionScreen() {
           })}
         </View>
       </ScrollView>
+      )}
 
       {/* Item Detail Modal */}
       {selectedItem && (
@@ -538,5 +573,81 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  // Empty State Styles
+  emptyStateContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
+  emptyStateContent: {
+    alignItems: 'center',
+    maxWidth: 300,
+  },
+  emptyStateIllustration: {
+    position: 'relative',
+    marginBottom: 24,
+  },
+  emptyStateMainEmoji: {
+    fontSize: 80,
+  },
+  emptyStateFloatingEmojis: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  floatingEmoji1: {
+    position: 'absolute',
+    top: -15,
+    right: -20,
+    fontSize: 24,
+  },
+  floatingEmoji2: {
+    position: 'absolute',
+    top: 5,
+    left: -25,
+    fontSize: 20,
+  },
+  floatingEmoji3: {
+    position: 'absolute',
+    bottom: -10,
+    right: -25,
+    fontSize: 22,
+  },
+  emptyStateTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  emptyStateSubtitle: {
+    fontSize: 15,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  emptyStateTip: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginBottom: 24,
+  },
+  emptyStateTipText: {
+    fontSize: 14,
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  emptyStateCTA: {
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+    borderRadius: 14,
+  },
+  emptyStateCTAText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });

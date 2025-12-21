@@ -29,14 +29,20 @@ import {
 import * as FileSystem from 'expo-file-system';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   useColorScheme,
   View,
   StyleSheet,
   ScrollView,
   ActivityIndicator,
+  Animated,
+  Easing,
+  Dimensions,
+  Text as RNText,
 } from 'react-native';
+
+const { width } = Dimensions.get('window');
 
 export default function AnalysisScreen() {
   const rawColorScheme = useColorScheme();
@@ -65,8 +71,77 @@ export default function AnalysisScreen() {
     encouragement: string;
   } | null>(null);
   const [motivation, setMotivation] = useState<string>('');
+  const [loadingStage, setLoadingStage] = useState(0);
+
+  // Animation refs
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+  const progressAnim = useRef(new Animated.Value(0)).current;
+  const fadeAnim = useRef(new Animated.Value(1)).current;
 
   const room = rooms.find(r => r.id === roomId);
+
+  // Loading stages
+  const loadingStages = [
+    { emoji: '📷', text: 'Processing your photo...' },
+    { emoji: '🔍', text: 'Analyzing room layout...' },
+    { emoji: '🧹', text: 'Identifying clutter areas...' },
+    { emoji: '📋', text: 'Creating your personalized plan...' },
+    { emoji: '✨', text: 'Almost ready!' },
+  ];
+
+  // Animate loading stages
+  useEffect(() => {
+    if (isAnalyzing) {
+      // Pulse animation
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+
+      // Rotate animation for scanning effect
+      Animated.loop(
+        Animated.timing(rotateAnim, {
+          toValue: 1,
+          duration: 3000,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        })
+      ).start();
+
+      // Progress through stages
+      const stageInterval = setInterval(() => {
+        setLoadingStage(prev => {
+          const next = prev < loadingStages.length - 1 ? prev + 1 : prev;
+          Animated.timing(progressAnim, {
+            toValue: (next + 1) / loadingStages.length,
+            duration: 300,
+            useNativeDriver: false,
+          }).start();
+          return next;
+        });
+      }, 2000);
+
+      return () => {
+        clearInterval(stageInterval);
+        pulseAnim.setValue(1);
+        rotateAnim.setValue(0);
+      };
+    } else {
+      setLoadingStage(0);
+      progressAnim.setValue(0);
+    }
+  }, [isAnalyzing]);
 
   useEffect(() => {
     if (mode === 'compare' && room && room.photos.length >= 2) {
@@ -173,24 +248,117 @@ export default function AnalysisScreen() {
     }
   };
 
-  // Loading state
+  const rotateInterpolate = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
+  // Loading state with image preview
   if (isAnalyzing) {
+    const currentStage = loadingStages[loadingStage];
+
     return (
-      <Host style={styles.container}>
-        <VStack spacing={24} alignment="center">
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text size={20} weight="semibold">Analyzing your space...</Text>
-          <Text size={14} modifiers={[foregroundStyle(colors.textSecondary)]}>
-            Our AI is creating your personalized cleaning plan
-          </Text>
-          <VStack spacing={8} alignment="center">
-            <Text size={48}>🔍</Text>
-            <Text size={14} modifiers={[foregroundStyle(colors.textSecondary)]}>
-              Looking for quick wins...
-            </Text>
-          </VStack>
-        </VStack>
-      </Host>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        {/* Image Preview with Scanning Effect */}
+        {imageUri && (
+          <View style={styles.loadingImageContainer}>
+            <Image
+              source={{ uri: imageUri }}
+              style={styles.loadingImage}
+              contentFit="cover"
+            />
+
+            {/* Scanning Overlay */}
+            <View style={styles.scanningOverlay}>
+              <Animated.View
+                style={[
+                  styles.scanLine,
+                  {
+                    transform: [
+                      {
+                        translateY: progressAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0, 300],
+                        }),
+                      },
+                    ],
+                  },
+                ]}
+              />
+
+              {/* Corner brackets */}
+              <View style={[styles.scanCorner, styles.scanCornerTL]} />
+              <View style={[styles.scanCorner, styles.scanCornerTR]} />
+              <View style={[styles.scanCorner, styles.scanCornerBL]} />
+              <View style={[styles.scanCorner, styles.scanCornerBR]} />
+            </View>
+
+            {/* Gradient overlay */}
+            <View style={styles.gradientOverlay} />
+          </View>
+        )}
+
+        {/* Loading Info Card */}
+        <View style={[styles.loadingCard, { backgroundColor: colors.card }]}>
+          <View style={styles.loadingHeader}>
+            <Animated.View
+              style={[
+                styles.loadingEmojiContainer,
+                { transform: [{ scale: pulseAnim }] },
+              ]}
+            >
+              <RNText style={styles.loadingEmoji}>{currentStage.emoji}</RNText>
+            </Animated.View>
+            <View style={styles.loadingTextContainer}>
+              <RNText style={[styles.loadingTitle, { color: colors.text }]}>
+                Analyzing your space...
+              </RNText>
+              <RNText style={[styles.loadingSubtitle, { color: colors.textSecondary }]}>
+                {currentStage.text}
+              </RNText>
+            </View>
+          </View>
+
+          {/* Progress Bar */}
+          <View style={[styles.progressBarContainer, { backgroundColor: colors.border }]}>
+            <Animated.View
+              style={[
+                styles.progressBar,
+                {
+                  backgroundColor: colors.primary,
+                  width: progressAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['0%', '100%'],
+                  }),
+                },
+              ]}
+            />
+          </View>
+
+          {/* Stage Indicators */}
+          <View style={styles.stageIndicators}>
+            {loadingStages.map((stage, index) => (
+              <View
+                key={index}
+                style={[
+                  styles.stageIndicator,
+                  {
+                    backgroundColor:
+                      index <= loadingStage ? colors.primary : colors.border,
+                  },
+                ]}
+              />
+            ))}
+          </View>
+
+          {/* Tips */}
+          <View style={[styles.tipContainer, { backgroundColor: colors.primary + '15' }]}>
+            <RNText style={[styles.tipText, { color: colors.primary }]}>
+              💡 Tip: The more of your room visible, the better our AI can help!
+            </RNText>
+          </View>
+        </View>
+      </View>
     );
   }
 
@@ -514,5 +682,147 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 100,
+  },
+  // Loading State Styles
+  loadingImageContainer: {
+    flex: 1,
+    position: 'relative',
+  },
+  loadingImage: {
+    flex: 1,
+    width: '100%',
+  },
+  scanningOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    overflow: 'hidden',
+  },
+  scanLine: {
+    position: 'absolute',
+    left: 20,
+    right: 20,
+    height: 2,
+    backgroundColor: 'rgba(74, 144, 226, 0.8)',
+    shadowColor: '#4A90E2',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 10,
+  },
+  scanCorner: {
+    position: 'absolute',
+    width: 30,
+    height: 30,
+    borderColor: 'rgba(255, 255, 255, 0.8)',
+  },
+  scanCornerTL: {
+    top: 20,
+    left: 20,
+    borderTopWidth: 3,
+    borderLeftWidth: 3,
+    borderTopLeftRadius: 8,
+  },
+  scanCornerTR: {
+    top: 20,
+    right: 20,
+    borderTopWidth: 3,
+    borderRightWidth: 3,
+    borderTopRightRadius: 8,
+  },
+  scanCornerBL: {
+    bottom: 20,
+    left: 20,
+    borderBottomWidth: 3,
+    borderLeftWidth: 3,
+    borderBottomLeftRadius: 8,
+  },
+  scanCornerBR: {
+    bottom: 20,
+    right: 20,
+    borderBottomWidth: 3,
+    borderRightWidth: 3,
+    borderBottomRightRadius: 8,
+  },
+  gradientOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 200,
+    backgroundColor: 'transparent',
+    // Using solid color as gradient fallback
+    opacity: 0.7,
+  },
+  loadingCard: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: 48,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  loadingHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  loadingEmojiContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(74, 144, 226, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  loadingEmoji: {
+    fontSize: 28,
+  },
+  loadingTextContainer: {
+    flex: 1,
+  },
+  loadingTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  loadingSubtitle: {
+    fontSize: 15,
+  },
+  progressBarContainer: {
+    height: 6,
+    borderRadius: 3,
+    overflow: 'hidden',
+    marginBottom: 16,
+  },
+  progressBar: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  stageIndicators: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: 20,
+  },
+  stageIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  tipContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  tipText: {
+    fontSize: 14,
+    textAlign: 'center',
+    fontWeight: '500',
   },
 });

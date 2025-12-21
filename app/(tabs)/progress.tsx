@@ -23,13 +23,17 @@ import {
   glassEffect,
   background,
 } from '@expo/ui/swift-ui/modifiers';
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   useColorScheme,
   View,
   StyleSheet,
   ScrollView,
+  Text as RNText,
+  Dimensions,
 } from 'react-native';
+
+const { width } = Dimensions.get('window');
 
 export default function ProgressScreen() {
   const rawColorScheme = useColorScheme();
@@ -50,6 +54,32 @@ export default function ProgressScreen() {
   // Calculate time spent
   const hours = Math.floor(stats.totalMinutesCleaned / 60);
   const minutes = stats.totalMinutesCleaned % 60;
+
+  // Generate weekly activity data (mock data based on actual stats)
+  const weeklyData = useMemo(() => {
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const today = new Date().getDay();
+    const adjustedToday = today === 0 ? 6 : today - 1; // Convert to Mon=0
+
+    // Simulate activity based on streak and tasks
+    return days.map((day, index) => {
+      let value = 0;
+      if (index <= adjustedToday && stats.currentStreak > 0) {
+        // More recent days have more activity
+        const daysFromToday = adjustedToday - index;
+        if (daysFromToday < stats.currentStreak) {
+          value = Math.max(20, Math.min(100, stats.totalTasksCompleted * 5 - daysFromToday * 10));
+        }
+      }
+      return {
+        day,
+        value: Math.max(0, value),
+        isToday: index === adjustedToday,
+      };
+    });
+  }, [stats.currentStreak, stats.totalTasksCompleted]);
+
+  const maxWeeklyValue = Math.max(...weeklyData.map(d => d.value), 1);
 
   return (
     <Host style={styles.container}>
@@ -91,6 +121,52 @@ export default function ProgressScreen() {
                 </VStack>
               </HStack>
             </VStack>
+          </Section>
+
+          {/* Weekly Activity Chart */}
+          <Section title="This Week's Activity">
+            <View style={styles.weeklyChartContainer}>
+              {weeklyData.map((item, index) => (
+                <View key={index} style={styles.weeklyBarContainer}>
+                  <View style={styles.weeklyBarWrapper}>
+                    <View
+                      style={[
+                        styles.weeklyBar,
+                        {
+                          height: `${Math.max(5, (item.value / maxWeeklyValue) * 100)}%`,
+                          backgroundColor: item.isToday
+                            ? colors.primary
+                            : item.value > 0
+                            ? colors.primary + '80'
+                            : colors.border,
+                        },
+                      ]}
+                    />
+                  </View>
+                  <RNText
+                    style={[
+                      styles.weeklyDayLabel,
+                      {
+                        color: item.isToday ? colors.primary : colors.textSecondary,
+                        fontWeight: item.isToday ? '700' : '400',
+                      },
+                    ]}
+                  >
+                    {item.day}
+                  </RNText>
+                  {item.isToday && (
+                    <View style={[styles.todayIndicator, { backgroundColor: colors.primary }]} />
+                  )}
+                </View>
+              ))}
+            </View>
+            {stats.currentStreak > 0 && (
+              <View style={[styles.streakBanner, { backgroundColor: colors.primary + '15' }]}>
+                <RNText style={[styles.streakBannerText, { color: colors.primary }]}>
+                  🔥 {stats.currentStreak} day streak! Keep it going!
+                </RNText>
+              </View>
+            )}
           </Section>
 
           {/* Stats Grid */}
@@ -315,5 +391,51 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 100,
+  },
+  // Weekly Chart Styles
+  weeklyChartContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    height: 120,
+    paddingHorizontal: 8,
+    marginBottom: 16,
+  },
+  weeklyBarContainer: {
+    flex: 1,
+    alignItems: 'center',
+    position: 'relative',
+  },
+  weeklyBarWrapper: {
+    width: '70%',
+    height: 80,
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+  },
+  weeklyBar: {
+    width: '100%',
+    borderRadius: 4,
+    minHeight: 4,
+  },
+  weeklyDayLabel: {
+    fontSize: 12,
+    marginTop: 8,
+  },
+  todayIndicator: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    position: 'absolute',
+    bottom: -10,
+  },
+  streakBanner: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  streakBannerText: {
+    fontSize: 15,
+    fontWeight: '600',
   },
 });

@@ -30,7 +30,7 @@ import {
 } from '@expo/ui/swift-ui/modifiers';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   useColorScheme,
   View,
@@ -39,6 +39,7 @@ import {
   Pressable,
   Alert,
   Text as RNText,
+  Animated,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
@@ -58,8 +59,45 @@ export default function RoomDetailScreen() {
 
   const [filter, setFilter] = useState<'all' | 'pending' | 'completed'>('all');
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
+  const [celebratingTask, setCelebratingTask] = useState<string | null>(null);
+  const confettiAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const room = rooms.find(r => r.id === id);
+
+  // Celebration animation when task is completed
+  const celebrateCompletion = (taskId: string) => {
+    setCelebratingTask(taskId);
+
+    // Scale bounce animation
+    Animated.sequence([
+      Animated.spring(scaleAnim, {
+        toValue: 1.1,
+        useNativeDriver: true,
+        tension: 200,
+        friction: 3,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Confetti fade animation
+    Animated.sequence([
+      Animated.timing(confettiAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.delay(1000),
+      Animated.timing(confettiAnim, {
+        toValue: 0,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+    ]).start(() => setCelebratingTask(null));
+  };
 
   if (!room) {
     return (
@@ -101,10 +139,28 @@ export default function RoomDetailScreen() {
     .reduce((acc, t) => acc + t.estimatedMinutes, 0);
 
   const handleTaskToggle = (taskId: string) => {
+    const task = room.tasks.find(t => t.id === taskId);
+    const wasCompleted = task?.completed;
+
     if (settings.hapticFeedback) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      if (!wasCompleted) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
     }
+
     toggleTask(room.id, taskId);
+
+    // Celebrate if task was just completed
+    if (!wasCompleted) {
+      celebrateCompletion(taskId);
+    }
+  };
+
+  const handleStartFocusMode = () => {
+    setActiveRoom(room.id);
+    router.push('/focus');
   };
 
   const handleSubTaskToggle = (taskId: string, subTaskId: string) => {
@@ -149,6 +205,40 @@ export default function RoomDetailScreen() {
 
   return (
     <Host style={styles.container}>
+      {/* Celebration Confetti Overlay */}
+      {celebratingTask && (
+        <Animated.View
+          style={[
+            styles.confettiOverlay,
+            { opacity: confettiAnim },
+          ]}
+          pointerEvents="none"
+        >
+          <View style={styles.confettiContainer}>
+            {['🎉', '✨', '⭐', '🌟', '💫', '🎊'].map((emoji, i) => (
+              <Animated.Text
+                key={i}
+                style={[
+                  styles.confettiEmoji,
+                  {
+                    transform: [
+                      { scale: scaleAnim },
+                      { translateY: confettiAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [-20, 0],
+                      })},
+                    ],
+                  },
+                ]}
+              >
+                {emoji}
+              </Animated.Text>
+            ))}
+          </View>
+          <RNText style={styles.completedText}>Task Complete!</RNText>
+        </Animated.View>
+      )}
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -222,6 +312,28 @@ export default function RoomDetailScreen() {
               )}
             </VStack>
           </Section>
+
+          {/* Focus Mode CTA */}
+          {room.tasks.filter(t => !t.completed).length > 0 && (
+            <Section title="">
+              <Pressable onPress={handleStartFocusMode}>
+                <View style={[styles.focusModeCard, { backgroundColor: colors.primary }]}>
+                  <View style={styles.focusModeContent}>
+                    <View style={styles.focusModeIcon}>
+                      <RNText style={styles.focusModeEmoji}>🎯</RNText>
+                    </View>
+                    <View style={styles.focusModeText}>
+                      <RNText style={styles.focusModeTitle}>Start Focus Session</RNText>
+                      <RNText style={styles.focusModeSubtitle}>
+                        {room.tasks.filter(t => !t.completed).length} tasks • ~{remainingTime} min
+                      </RNText>
+                    </View>
+                    <RNText style={styles.focusModeArrow}>→</RNText>
+                  </View>
+                </View>
+              </Pressable>
+            </Section>
+          )}
 
           {/* Actions */}
           <Section title="">
@@ -369,24 +481,50 @@ export default function RoomDetailScreen() {
             </Section>
           )}
 
-          {/* No Tasks */}
+          {/* No Tasks - Enhanced Empty State */}
           {room.tasks.length === 0 && (
             <Section title="">
-              <VStack spacing={16} alignment="center">
-                <Text size={48}>📋</Text>
-                <Text size={18} weight="semibold">No tasks yet</Text>
-                <Text
-                  size={14}
-                  modifiers={[foregroundStyle(colors.textSecondary)]}
-                >
-                  Take a photo to get AI-generated tasks!
-                </Text>
-                <Button
-                  label="📸 Capture Space"
+              <View style={[styles.noTasksCard, { backgroundColor: colors.card }]}>
+                <View style={styles.noTasksIllustration}>
+                  <RNText style={styles.noTasksEmoji}>📋</RNText>
+                  <View style={styles.noTasksSparkles}>
+                    <RNText style={styles.noTasksSparkle1}>✨</RNText>
+                    <RNText style={styles.noTasksSparkle2}>🧹</RNText>
+                  </View>
+                </View>
+                <RNText style={[styles.noTasksTitle, { color: colors.text }]}>
+                  Ready for AI Analysis
+                </RNText>
+                <RNText style={[styles.noTasksSubtitle, { color: colors.textSecondary }]}>
+                  Take a photo of this space and our AI will create a personalized cleaning plan with step-by-step tasks.
+                </RNText>
+                <View style={styles.noTasksFeatures}>
+                  <View style={styles.noTasksFeature}>
+                    <RNText style={styles.noTasksFeatureEmoji}>📸</RNText>
+                    <RNText style={[styles.noTasksFeatureText, { color: colors.textSecondary }]}>
+                      Capture the space
+                    </RNText>
+                  </View>
+                  <View style={styles.noTasksFeature}>
+                    <RNText style={styles.noTasksFeatureEmoji}>🤖</RNText>
+                    <RNText style={[styles.noTasksFeatureText, { color: colors.textSecondary }]}>
+                      AI identifies tasks
+                    </RNText>
+                  </View>
+                  <View style={styles.noTasksFeature}>
+                    <RNText style={styles.noTasksFeatureEmoji}>⚡</RNText>
+                    <RNText style={[styles.noTasksFeatureText, { color: colors.textSecondary }]}>
+                      Get quick wins first
+                    </RNText>
+                  </View>
+                </View>
+                <Pressable
+                  style={[styles.noTasksCTA, { backgroundColor: colors.primary }]}
                   onPress={handleTakePhoto}
-                  modifiers={[buttonStyle('borderedProminent')]}
-                />
-              </VStack>
+                >
+                  <RNText style={styles.noTasksCTAText}>📸 Capture Space</RNText>
+                </Pressable>
+              </View>
             </Section>
           )}
 
@@ -557,5 +695,149 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 100,
+  },
+  // Focus Mode Card
+  focusModeCard: {
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  focusModeContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+  },
+  focusModeIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  focusModeEmoji: {
+    fontSize: 24,
+  },
+  focusModeText: {
+    flex: 1,
+  },
+  focusModeTitle: {
+    color: '#fff',
+    fontSize: 17,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  focusModeSubtitle: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14,
+  },
+  focusModeArrow: {
+    color: '#fff',
+    fontSize: 24,
+    fontWeight: '300',
+  },
+  // Celebration Overlay
+  confettiOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 100,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.3)',
+  },
+  confettiContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  confettiEmoji: {
+    fontSize: 32,
+    marginHorizontal: 8,
+  },
+  completedText: {
+    color: '#fff',
+    fontSize: 24,
+    fontWeight: '700',
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
+  // No Tasks Empty State
+  noTasksCard: {
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+  },
+  noTasksIllustration: {
+    position: 'relative',
+    marginBottom: 16,
+  },
+  noTasksEmoji: {
+    fontSize: 56,
+  },
+  noTasksSparkles: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  noTasksSparkle1: {
+    position: 'absolute',
+    top: -8,
+    right: -15,
+    fontSize: 18,
+  },
+  noTasksSparkle2: {
+    position: 'absolute',
+    bottom: -5,
+    left: -15,
+    fontSize: 16,
+  },
+  noTasksTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  noTasksSubtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 20,
+    paddingHorizontal: 8,
+  },
+  noTasksFeatures: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+    marginBottom: 20,
+  },
+  noTasksFeature: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  noTasksFeatureEmoji: {
+    fontSize: 24,
+    marginBottom: 4,
+  },
+  noTasksFeatureText: {
+    fontSize: 11,
+    textAlign: 'center',
+  },
+  noTasksCTA: {
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 14,
+    width: '100%',
+    alignItems: 'center',
+  },
+  noTasksCTAText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });
