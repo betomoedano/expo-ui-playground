@@ -5,7 +5,8 @@
 
 import { Colors, RoomColors } from '@/constants/Colors';
 import { useDeclutter } from '@/context/DeclutterContext';
-import { Room, ROOM_TYPE_INFO, RoomType, MASCOT_PERSONALITIES } from '@/types/declutter';
+import { Room, ROOM_TYPE_INFO, RoomType, MASCOT_PERSONALITIES, FOCUS_QUOTES } from '@/types/declutter';
+import { getMotivation } from '@/services/gemini';
 import {
   Button,
   Form,
@@ -27,7 +28,7 @@ import {
 } from '@expo/ui/swift-ui/modifiers';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   useColorScheme,
   View,
@@ -58,6 +59,37 @@ export default function HomeScreen() {
   } = useDeclutter();
   const [refreshing, setRefreshing] = useState(false);
   const [showAddRoom, setShowAddRoom] = useState(false);
+  const [motivationQuote, setMotivationQuote] = useState<string>(
+    FOCUS_QUOTES[Math.floor(Math.random() * FOCUS_QUOTES.length)]
+  );
+
+  // Rotate motivation quote periodically
+  useEffect(() => {
+    const loadMotivation = async () => {
+      try {
+        // Try to get AI-generated motivation, fallback to predefined quotes
+        const context = rooms.length > 0
+          ? `User has ${rooms.length} rooms and ${stats.totalTasksCompleted} tasks completed`
+          : 'New user just getting started';
+        const aiMotivation = await getMotivation(context);
+        if (aiMotivation) {
+          setMotivationQuote(aiMotivation);
+        }
+      } catch {
+        // Fallback to random quote from list
+        setMotivationQuote(FOCUS_QUOTES[Math.floor(Math.random() * FOCUS_QUOTES.length)]);
+      }
+    };
+
+    loadMotivation();
+
+    // Rotate quote every 5 minutes
+    const interval = setInterval(() => {
+      setMotivationQuote(FOCUS_QUOTES[Math.floor(Math.random() * FOCUS_QUOTES.length)]);
+    }, 300000);
+
+    return () => clearInterval(interval);
+  }, [rooms.length, stats.totalTasksCompleted]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -329,7 +361,7 @@ export default function HomeScreen() {
                   Today's motivation
                 </Text>
                 <Text size={16} weight="medium">
-                  "Progress, not perfection. Every small step counts!" ✨
+                  "{motivationQuote}" ✨
                 </Text>
               </VStack>
             </Group>

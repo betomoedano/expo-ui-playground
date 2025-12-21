@@ -327,6 +327,10 @@ export interface DeclutterState {
   collectItem: (collectibleId: string, roomId?: string, taskId?: string) => void;
   spawnCollectible: () => SpawnEvent | null;
   dismissSpawn: () => void;
+
+  // Data Management
+  clearAllData: () => Promise<void>;
+  resetStats: () => void;
 }
 
 // Predefined badges

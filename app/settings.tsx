@@ -38,10 +38,11 @@ export default function SettingsScreen() {
   const rawColorScheme = useColorScheme();
   const colorScheme = rawColorScheme === 'dark' ? 'dark' : 'light';
   const colors = Colors[colorScheme];
-  const { settings, updateSettings, rooms, stats } = useDeclutter();
+  const { settings, updateSettings, rooms, stats, clearAllData } = useDeclutter();
 
   const [apiKey, setApiKey] = useState('');
   const [showApiKey, setShowApiKey] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
 
   useEffect(() => {
     loadApiKey().then(key => {
@@ -49,23 +50,86 @@ export default function SettingsScreen() {
     });
   }, []);
 
+  const validateApiKey = async (key: string): Promise<boolean> => {
+    if (!key || key.length < 20) {
+      return false;
+    }
+
+    try {
+      // Test the API key with a simple request
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${key}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: 'Hello' }] }],
+            generationConfig: { maxOutputTokens: 10 },
+          }),
+        }
+      );
+      return response.ok;
+    } catch {
+      return false;
+    }
+  };
+
   const handleSaveApiKey = async () => {
-    await saveApiKey(apiKey);
-    Alert.alert('Saved', 'Your API key has been saved successfully!');
+    if (!apiKey.trim()) {
+      Alert.alert('Error', 'Please enter an API key.');
+      return;
+    }
+
+    if (apiKey.length < 20) {
+      Alert.alert('Error', 'API key appears to be too short. Please check your key.');
+      return;
+    }
+
+    setIsValidating(true);
+    const isValid = await validateApiKey(apiKey);
+    setIsValidating(false);
+
+    if (isValid) {
+      await saveApiKey(apiKey);
+      Alert.alert('Success', 'Your API key has been validated and saved!');
+    } else {
+      Alert.alert(
+        'Invalid API Key',
+        'The API key could not be validated. Please check that you have a valid Gemini API key.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Save Anyway',
+            onPress: async () => {
+              await saveApiKey(apiKey);
+              Alert.alert('Saved', 'API key saved without validation.');
+            },
+          },
+        ]
+      );
+    }
   };
 
   const handleClearData = () => {
     Alert.alert(
       'Clear All Data',
-      'This will delete all your rooms, tasks, and progress. This cannot be undone.',
+      'This will delete all your rooms, tasks, progress, mascot, and collection. This cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Clear All',
           style: 'destructive',
-          onPress: () => {
-            // Would need to implement a clearAll function in context
-            Alert.alert('Cleared', 'All data has been cleared. Restart the app.');
+          onPress: async () => {
+            try {
+              await clearAllData();
+              Alert.alert(
+                'Data Cleared',
+                'All data has been cleared successfully. The app will restart fresh.',
+                [{ text: 'OK', onPress: () => router.replace('/onboarding') }]
+              );
+            } catch (error) {
+              Alert.alert('Error', 'Failed to clear data. Please try again.');
+            }
           },
         },
       ]
@@ -118,7 +182,7 @@ export default function SettingsScreen() {
                   modifiers={[buttonStyle('bordered'), controlSize('small')]}
                 />
                 <Button
-                  label="Save"
+                  label={isValidating ? 'Validating...' : 'Save & Validate'}
                   onPress={handleSaveApiKey}
                   modifiers={[buttonStyle('borderedProminent'), controlSize('small')]}
                 />

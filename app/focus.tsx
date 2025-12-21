@@ -210,7 +210,10 @@ export default function FocusModeScreen() {
   const [quote, setQuote] = useState(FOCUS_QUOTES[0]);
   const [showExitWarning, setShowExitWarning] = useState(false);
   const [showCompletion, setShowCompletion] = useState(false);
+  const [isBreakMode, setIsBreakMode] = useState(false);
+  const [breakTimeRemaining, setBreakTimeRemaining] = useState(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const breakTimerRef = useRef<NodeJS.Timeout | null>(null);
   const appState = useRef(AppState.currentState);
 
   // Animation values
@@ -299,15 +302,72 @@ export default function FocusModeScreen() {
     if (timerRef.current) {
       clearInterval(timerRef.current);
     }
-    setShowCompletion(true);
+
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     Vibration.vibrate([0, 200, 100, 200, 100, 200]);
+
+    // Check if we should auto-start a break
+    if (settings.focusMode.autoStartBreak && !isBreakMode) {
+      startBreak();
+    } else {
+      setShowCompletion(true);
+      setTimeout(() => {
+        endFocusSession();
+        router.back();
+      }, 3000);
+    }
+  }
+
+  function startBreak() {
+    setIsBreakMode(true);
+    setBreakTimeRemaining(settings.focusMode.breakDuration * 60);
+
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+    // Start break timer
+    breakTimerRef.current = setInterval(() => {
+      setBreakTimeRemaining(prev => {
+        if (prev <= 1) {
+          endBreak();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }
+
+  function endBreak() {
+    if (breakTimerRef.current) {
+      clearInterval(breakTimerRef.current);
+    }
+    setIsBreakMode(false);
+    setShowCompletion(true);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    Vibration.vibrate([0, 300, 150, 300]);
 
     setTimeout(() => {
       endFocusSession();
       router.back();
     }, 3000);
   }
+
+  function skipBreak() {
+    if (breakTimerRef.current) {
+      clearInterval(breakTimerRef.current);
+    }
+    setIsBreakMode(false);
+    endFocusSession();
+    router.back();
+  }
+
+  // Cleanup break timer on unmount
+  useEffect(() => {
+    return () => {
+      if (breakTimerRef.current) {
+        clearInterval(breakTimerRef.current);
+      }
+    };
+  }, []);
 
   function handlePauseResume() {
     if (focusSession?.isPaused) {
@@ -391,6 +451,42 @@ export default function FocusModeScreen() {
       {particles.map(p => (
         <BreathingParticle key={p.id} delay={p.delay} size={p.size} x={p.x} y={p.y} />
       ))}
+
+      {/* Break Mode Overlay */}
+      {isBreakMode && (
+        <Animated.View
+          entering={FadeIn}
+          style={styles.breakOverlay}
+        >
+          <View style={styles.breakContent}>
+            <RNText style={styles.breakEmoji}>☕</RNText>
+            <RNText style={styles.breakTitle}>Break Time!</RNText>
+            <RNText style={styles.breakSubtitle}>
+              You've earned a rest. Take a breather!
+            </RNText>
+
+            <View style={styles.breakTimerContainer}>
+              <RNText style={styles.breakTime}>
+                {Math.floor(breakTimeRemaining / 60).toString().padStart(2, '0')}
+                :
+                {(breakTimeRemaining % 60).toString().padStart(2, '0')}
+              </RNText>
+              <RNText style={styles.breakLabel}>remaining</RNText>
+            </View>
+
+            <View style={styles.breakSuggestions}>
+              <RNText style={styles.breakSuggestionTitle}>Quick suggestions:</RNText>
+              <RNText style={styles.breakSuggestion}>💧 Drink some water</RNText>
+              <RNText style={styles.breakSuggestion}>🚶 Stretch your legs</RNText>
+              <RNText style={styles.breakSuggestion}>👀 Rest your eyes</RNText>
+            </View>
+
+            <Pressable style={styles.skipBreakButton} onPress={skipBreak}>
+              <RNText style={styles.skipBreakText}>Skip Break & Finish</RNText>
+            </Pressable>
+          </View>
+        </Animated.View>
+      )}
 
       {/* Completion celebration */}
       {showCompletion && (
@@ -894,5 +990,76 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '700',
     color: '#22C55E',
+  },
+  breakOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(79, 70, 229, 0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 150,
+  },
+  breakContent: {
+    alignItems: 'center',
+    padding: 40,
+  },
+  breakEmoji: {
+    fontSize: 72,
+    marginBottom: 16,
+  },
+  breakTitle: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: '#fff',
+    marginBottom: 8,
+  },
+  breakSubtitle: {
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.8)',
+    marginBottom: 32,
+    textAlign: 'center',
+  },
+  breakTimerContainer: {
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  breakTime: {
+    fontSize: 64,
+    fontWeight: '200',
+    color: '#fff',
+    fontVariant: ['tabular-nums'],
+  },
+  breakLabel: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.6)',
+    textTransform: 'uppercase',
+    letterSpacing: 3,
+    marginTop: 8,
+  },
+  breakSuggestions: {
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  breakSuggestionTitle: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.7)',
+    marginBottom: 12,
+  },
+  breakSuggestion: {
+    fontSize: 16,
+    color: '#fff',
+    marginVertical: 4,
+  },
+  skipBreakButton: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  skipBreakText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
   },
 });

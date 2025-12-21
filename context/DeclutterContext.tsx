@@ -725,6 +725,48 @@ export function DeclutterProvider({ children }: { children: ReactNode }) {
     setActiveSpawn(null);
   };
 
+  // =====================
+  // DATA MANAGEMENT ACTIONS
+  // =====================
+
+  const clearAllData = async () => {
+    try {
+      // Clear all AsyncStorage keys
+      await Promise.all([
+        AsyncStorage.removeItem(STORAGE_KEYS.USER),
+        AsyncStorage.removeItem(STORAGE_KEYS.ROOMS),
+        AsyncStorage.removeItem(STORAGE_KEYS.STATS),
+        AsyncStorage.removeItem(STORAGE_KEYS.SETTINGS),
+        AsyncStorage.removeItem(STORAGE_KEYS.API_KEY),
+        AsyncStorage.removeItem(STORAGE_KEYS.MASCOT),
+        AsyncStorage.removeItem(STORAGE_KEYS.COLLECTION),
+        AsyncStorage.removeItem(STORAGE_KEYS.COLLECTION_STATS),
+      ]);
+
+      // Reset all state to defaults
+      setUser(null);
+      setRooms([]);
+      setStats(defaultStats);
+      setSettingsState(defaultSettings);
+      setActiveRoomId(null);
+      setCurrentSession(null);
+      setMascot(null);
+      setFocusSession(null);
+      setCollection([]);
+      setCollectionStats(defaultCollectionStats);
+      setActiveSpawn(null);
+      setIsAnalyzing(false);
+      setAnalysisError(null);
+    } catch (error) {
+      console.error('Error clearing data:', error);
+      throw error;
+    }
+  };
+
+  const resetStats = () => {
+    setStats(defaultStats);
+  };
+
   // Context value
   const value: DeclutterState = {
     user,
@@ -768,6 +810,8 @@ export function DeclutterProvider({ children }: { children: ReactNode }) {
     collectItem,
     spawnCollectible: spawnCollectibleAction,
     dismissSpawn,
+    clearAllData,
+    resetStats,
   };
 
   if (!isLoaded) {
