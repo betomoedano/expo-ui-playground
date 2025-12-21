@@ -1,6 +1,6 @@
 /**
  * Declutterly - Camera Screen
- * Capture photos of spaces for AI analysis
+ * Capture photos and videos of spaces for AI analysis
  */
 
 import { Colors } from '@/constants/Colors';
@@ -26,6 +26,7 @@ import {
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import {
@@ -36,7 +37,9 @@ import {
   ActivityIndicator,
   Pressable,
   Text as RNText,
+  Alert,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 
 const { width, height } = Dimensions.get('window');
 
@@ -48,10 +51,11 @@ export default function CameraScreen() {
   const cameraRef = useRef<CameraView>(null);
 
   const [permission, requestPermission] = useCameraPermissions();
-  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [capturedMedia, setCapturedMedia] = useState<{ uri: string; type: 'photo' | 'video' } | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
   const [showRoomSelector, setShowRoomSelector] = useState(false);
   const [selectedRoomType, setSelectedRoomType] = useState<RoomType | null>(null);
+  const [captureMode, setCaptureMode] = useState<'photo' | 'video'>('photo');
 
   const activeRoom = activeRoomId ? rooms.find(r => r.id === activeRoomId) : null;
 
@@ -103,45 +107,57 @@ export default function CameraScreen() {
 
     try {
       setIsCapturing(true);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
       const photo = await cameraRef.current.takePictureAsync({
-        quality: 0.8,
+        quality: 0.85,
         base64: false,
       });
 
       if (photo?.uri) {
-        setCapturedImage(photo.uri);
+        setCapturedMedia({ uri: photo.uri, type: 'photo' });
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
     } catch (error) {
       console.error('Error taking picture:', error);
+      Alert.alert('Error', 'Failed to take photo. Please try again.');
     } finally {
       setIsCapturing(false);
     }
   };
 
-  const pickImage = async () => {
+  const pickMedia = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        quality: 0.8,
+        mediaTypes: ImagePicker.MediaTypeOptions.All, // Allow both photos and videos
+        quality: 0.85,
         allowsEditing: true,
+        videoMaxDuration: 30, // 30 second max for videos
       });
 
       if (!result.canceled && result.assets[0]) {
-        setCapturedImage(result.assets[0].uri);
+        const asset = result.assets[0];
+        const isVideo = asset.type === 'video' || asset.uri.includes('.mp4') || asset.uri.includes('.mov');
+        setCapturedMedia({
+          uri: asset.uri,
+          type: isVideo ? 'video' : 'photo',
+        });
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
     } catch (error) {
-      console.error('Error picking image:', error);
+      console.error('Error picking media:', error);
+      Alert.alert('Error', 'Failed to select media. Please try again.');
     }
   };
 
   const handleRetake = () => {
-    setCapturedImage(null);
+    setCapturedMedia(null);
     setShowRoomSelector(false);
     setSelectedRoomType(null);
   };
 
   const handleAnalyze = async () => {
-    if (!capturedImage) return;
+    if (!capturedMedia) return;
 
     let roomId = activeRoomId;
 
@@ -170,7 +186,7 @@ export default function CameraScreen() {
       : 'before';
 
     addPhotoToRoom(roomId!, {
-      uri: capturedImage,
+      uri: capturedMedia.uri,
       timestamp: new Date(),
       type: photoType,
     });
@@ -178,7 +194,11 @@ export default function CameraScreen() {
     // Navigate to analysis
     router.replace({
       pathname: '/analysis',
-      params: { roomId, imageUri: capturedImage },
+      params: {
+        roomId,
+        imageUri: capturedMedia.uri,
+        mediaType: capturedMedia.type,
+      },
     });
   };
 
@@ -190,7 +210,7 @@ export default function CameraScreen() {
   };
 
   // Room selector view
-  if (showRoomSelector && capturedImage) {
+  if (showRoomSelector && capturedMedia) {
     return (
       <Host style={styles.container}>
         <Form>
@@ -223,70 +243,65 @@ export default function CameraScreen() {
     );
   }
 
-  // Preview captured image
-  if (capturedImage) {
+  // Preview captured media
+  if (capturedMedia) {
     return (
       <View style={styles.container}>
         <View style={styles.preview}>
+          {/* Actual Image/Video Preview */}
           <View style={styles.previewImage}>
-            {/* Using a simple View as placeholder since Image from expo-image might not render full-screen well */}
-            <View
-              style={[
-                StyleSheet.absoluteFill,
-                { backgroundColor: colors.card },
-              ]}
-            >
-              {/* Preview would show here */}
-              <View style={styles.previewContent}>
-                <RNText
-                  style={{
-                    color: colors.text,
-                    fontSize: 48,
-                    textAlign: 'center',
-                  }}
-                >
-                  📸
-                </RNText>
-                <RNText
-                  style={{
-                    color: colors.text,
-                    fontSize: 18,
-                    textAlign: 'center',
-                    marginTop: 16,
-                  }}
-                >
-                  Photo captured!
-                </RNText>
+            <Image
+              source={{ uri: capturedMedia.uri }}
+              style={StyleSheet.absoluteFill}
+              contentFit="cover"
+            />
+            {/* Video indicator */}
+            {capturedMedia.type === 'video' && (
+              <View style={styles.videoIndicator}>
+                <RNText style={styles.videoIndicatorText}>Video</RNText>
               </View>
-            </View>
+            )}
           </View>
 
           {/* Controls */}
           <View style={[styles.previewControls, { backgroundColor: colors.card }]}>
-            <Host style={{ flex: 1 }}>
-              <HStack spacing={16}>
-                <Button
-                  label="Retake"
-                  onPress={handleRetake}
-                  modifiers={[buttonStyle('bordered'), controlSize('large')]}
-                />
-                <Spacer />
-                <Button
-                  label="✨ Analyze"
-                  onPress={handleAnalyze}
-                  modifiers={[buttonStyle('borderedProminent'), controlSize('large')]}
-                />
-              </HStack>
-
+            <View style={styles.previewInfo}>
+              <RNText style={[styles.previewTitle, { color: colors.text }]}>
+                {capturedMedia.type === 'video' ? '🎬 Video Ready' : '📸 Photo Ready'}
+              </RNText>
+              <RNText style={[styles.previewSubtitle, { color: colors.textSecondary }]}>
+                {capturedMedia.type === 'video'
+                  ? 'AI will analyze your video for cleaning tasks'
+                  : 'AI will analyze your photo for cleaning tasks'
+                }
+              </RNText>
               {activeRoom && (
-                <Text
-                  size={14}
-                  modifiers={[foregroundStyle(colors.textSecondary)]}
-                >
-                  Adding to: {activeRoom.emoji} {activeRoom.name}
-                </Text>
+                <View style={[styles.roomTag, { backgroundColor: colors.primary + '20' }]}>
+                  <RNText style={[styles.roomTagText, { color: colors.primary }]}>
+                    {activeRoom.emoji} {activeRoom.name}
+                  </RNText>
+                </View>
               )}
-            </Host>
+            </View>
+
+            <View style={styles.previewButtons}>
+              <Pressable
+                style={[styles.previewButton, { backgroundColor: colors.border }]}
+                onPress={handleRetake}
+              >
+                <RNText style={[styles.previewButtonText, { color: colors.text }]}>
+                  Retake
+                </RNText>
+              </Pressable>
+              <Pressable
+                style={[styles.previewButton, styles.analyzeButton, { backgroundColor: colors.primary }]}
+                onPress={handleAnalyze}
+              >
+                <RNText style={styles.analyzeButtonText}>
+                  Analyze
+                </RNText>
+              </Pressable>
+            </View>
           </View>
         </View>
       </View>
@@ -331,7 +346,7 @@ export default function CameraScreen() {
         {/* Controls */}
         <View style={styles.controls}>
           {/* Gallery button */}
-          <Pressable onPress={pickImage} style={styles.sideButton}>
+          <Pressable onPress={pickMedia} style={styles.sideButton}>
             <RNText style={{ fontSize: 24 }}>🖼️</RNText>
           </Pressable>
 
@@ -489,13 +504,73 @@ const styles = StyleSheet.create({
   previewImage: {
     flex: 1,
   },
-  previewContent: {
+  previewControls: {
+    padding: 24,
+    paddingBottom: 48,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    marginTop: -24,
+  },
+  previewInfo: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  previewTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  previewSubtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  roomTag: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginTop: 8,
+  },
+  roomTagText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  previewButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  previewButton: {
     flex: 1,
-    justifyContent: 'center',
+    paddingVertical: 16,
+    borderRadius: 16,
     alignItems: 'center',
   },
-  previewControls: {
-    padding: 20,
-    paddingBottom: 40,
+  previewButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  analyzeButton: {
+    flex: 2,
+  },
+  analyzeButtonText: {
+    color: '#fff',
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  videoIndicator: {
+    position: 'absolute',
+    top: 60,
+    right: 16,
+    backgroundColor: 'rgba(239, 68, 68, 0.9)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  videoIndicatorText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
 });

@@ -20,52 +20,85 @@ export function getGeminiApiKey(): string {
   return API_KEY;
 }
 
-// System prompt for declutter analysis - ADHD-friendly approach
-const DECLUTTER_SYSTEM_PROMPT = `You are a friendly, supportive AI assistant helping people declutter and clean their spaces. You specialize in helping people with ADHD and those who feel overwhelmed by cleaning tasks.
+// System prompt for declutter analysis - ADHD-friendly with detailed cleaning instructions
+const DECLUTTER_SYSTEM_PROMPT = `You are a friendly, expert cleaning coach helping people declutter and clean their spaces. You specialize in helping people with ADHD, anxiety, and those who feel overwhelmed by cleaning tasks.
 
-Your approach:
-1. Be encouraging and non-judgmental - never shame the user for mess
-2. Break down tasks into SMALL, achievable steps (2-10 minutes each)
-3. Prioritize "quick wins" - easy tasks that make visible impact
-4. Use friendly, motivating language
-5. Focus on progress, not perfection
-6. Include specific, actionable steps (not vague instructions)
+## Your Approach:
+1. Be WARM and NON-JUDGMENTAL - never shame the user for mess, everyone's home gets messy
+2. Break down tasks into TINY, achievable steps (2-10 minutes each)
+3. Prioritize "quick wins" - easy tasks that create visible, immediate impact
+4. Use friendly, motivating language that celebrates effort, not perfection
+5. Provide SPECIFIC, ACTIONABLE instructions - tell them EXACTLY what to do
+6. Include helpful tips like WHERE to put things, HOW to clean surfaces, WHAT products to use
 
-When analyzing a room image:
-1. Assess the overall mess level (0-100)
-2. Identify specific items/areas that need attention
-3. Create a prioritized task list with time estimates
-4. Suggest "2-minute wins" for immediate dopamine hits
-5. Estimate total cleaning time
-6. Provide an encouraging summary
+## Cleaning Knowledge - Include specific instructions like:
+- For dishes: "Stack dirty dishes by the sink, run hot soapy water, let them soak while you do something else"
+- For surfaces: "Wipe from back to front so crumbs fall off the edge"
+- For clothes: "Create 3 piles: clean clothes, dirty clothes, clothes to donate"
+- For papers: "Quick sort: trash, needs action, to file. Don't read everything now!"
+- For floors: "Clear a path first, then sweep/vacuum in straight lines"
 
-Task difficulty guide:
-- "quick": 1-5 minutes, requires no decision making
-- "medium": 5-15 minutes, some decisions needed
-- "challenging": 15+ minutes, requires focus and decisions
+## When analyzing a room image:
+1. Assess the overall clutter/mess level (0-100)
+2. Identify SPECIFIC items and areas that need attention (be detailed!)
+3. Create a prioritized task list with realistic time estimates
+4. Suggest 2-3 "Quick Wins" (tasks under 2 minutes for immediate satisfaction)
+5. Provide room-specific cleaning tips
+6. Give an encouraging, personalized message
+
+## Task Difficulty Guide:
+- "quick": 1-5 minutes, zero decision-making, just physical action
+- "medium": 5-15 minutes, some decisions needed, more steps involved
+- "challenging": 15-30 minutes, requires focus, multiple decisions, possibly emotional (like going through old items)
+
+## Task Description Requirements:
+- Start with a verb (Pick up, Put away, Wipe, Gather, Sort)
+- Include WHERE things go ("Put books on the bookshelf" not just "Put books away")
+- Add HOW to do it if not obvious
+- Mention what supplies/tools needed if any
+- Each subtask should be completable in 1-3 minutes
 
 IMPORTANT: Always respond with valid JSON in this exact format:
 {
   "messLevel": <number 0-100>,
-  "summary": "<brief description of room state>",
-  "encouragement": "<motivating message>",
+  "summary": "<specific description of what you see - be detailed about items visible>",
+  "encouragement": "<personalized motivating message based on the specific room>",
   "roomType": "<bedroom|kitchen|bathroom|livingRoom|office|garage|closet|other>",
-  "quickWins": ["<2-min task 1>", "<2-min task 2>", ...],
+  "quickWins": ["<specific 2-min task 1>", "<specific 2-min task 2>", "<specific 2-min task 3>"],
   "estimatedTotalTime": <total minutes>,
   "tasks": [
     {
-      "title": "<task title>",
-      "description": "<specific instructions>",
+      "title": "<action verb + specific task>",
+      "description": "<detailed step-by-step instructions with WHERE and HOW>",
       "emoji": "<relevant emoji>",
       "priority": "<high|medium|low>",
       "difficulty": "<quick|medium|challenging>",
       "estimatedMinutes": <number>,
-      "tips": ["<helpful tip 1>", "<helpful tip 2>"],
+      "tips": ["<helpful practical tip 1>", "<helpful practical tip 2>"],
       "subtasks": [
-        {"title": "<subtask 1>"},
-        {"title": "<subtask 2>"}
+        {"title": "<tiny specific action 1>"},
+        {"title": "<tiny specific action 2>"},
+        {"title": "<tiny specific action 3>"}
       ]
     }
+  ]
+}
+
+Example task with proper detail:
+{
+  "title": "Clear the desk surface",
+  "description": "Remove everything from your desk and sort into 4 piles: (1) trash, (2) belongs elsewhere, (3) needs action, (4) stays on desk. Put trash in bin, relocate items to their homes, and only return essential items to desk.",
+  "emoji": "📝",
+  "priority": "high",
+  "difficulty": "medium",
+  "estimatedMinutes": 12,
+  "tips": ["Take a before photo to see your progress later!", "If you haven't used something in 6 months, it probably doesn't need to be on your desk"],
+  "subtasks": [
+    {"title": "Clear everything off the desk onto the floor or bed"},
+    {"title": "Throw away obvious trash (wrappers, old papers)"},
+    {"title": "Put dishes in the kitchen"},
+    {"title": "Return books to bookshelf"},
+    {"title": "Only put back: computer, one plant, lamp, and current project"}
   ]
 }`;
 
@@ -146,52 +179,112 @@ function parseAIResponse(responseText: string): AIAnalysisResult {
   }
 }
 
-// Default tasks when AI analysis fails
+// Default tasks when AI analysis fails - with detailed instructions
 function getDefaultTasks(): CleaningTask[] {
   return [
     {
       id: generateId(),
-      title: 'Quick Trash Pickup',
-      description: 'Walk around and pick up any obvious trash or items for recycling',
+      title: 'Quick Trash Sweep',
+      description: 'Grab a trash bag and walk around the room. Pick up anything that is obviously garbage: wrappers, tissues, empty containers, junk mail. Toss it all in the bag. This is the fastest way to make a visible difference!',
       emoji: '🗑️',
       priority: 'high',
       difficulty: 'quick',
       estimatedMinutes: 3,
       completed: false,
-      tips: ['Grab a bag before you start', "Don't overthink - if it's trash, toss it!"],
+      tips: [
+        'Grab a bag BEFORE you start walking around',
+        "Don't read anything - if it looks like trash, toss it!",
+        'Check under furniture and in corners',
+      ],
+      subtasks: [
+        { id: generateId(), title: 'Grab a trash bag or use a small bin', completed: false },
+        { id: generateId(), title: 'Walk clockwise around the room', completed: false },
+        { id: generateId(), title: 'Toss any obvious garbage', completed: false },
+      ],
     },
     {
       id: generateId(),
-      title: 'Clear One Surface',
-      description: 'Pick one surface (table, counter, desk) and clear everything off it',
+      title: 'Clear One Surface Completely',
+      description: 'Pick the most visible surface in the room (table, counter, desk, nightstand). Remove EVERYTHING from it. Sort items into 3 piles: (1) Trash - throw away, (2) Belongs elsewhere - relocate now, (3) Stays here - put back neatly.',
       emoji: '✨',
       priority: 'high',
       difficulty: 'medium',
       estimatedMinutes: 10,
       completed: false,
-      tips: ['Start with the most visible surface', 'Sort items into keep, trash, and relocate piles'],
+      tips: [
+        'Start with the first surface you see when entering the room',
+        'Take a before photo to appreciate your progress!',
+        'Only put back items you actually USE on that surface',
+      ],
+      subtasks: [
+        { id: generateId(), title: 'Remove everything from the surface', completed: false },
+        { id: generateId(), title: 'Wipe the surface clean', completed: false },
+        { id: generateId(), title: 'Throw away trash items', completed: false },
+        { id: generateId(), title: 'Put items that belong elsewhere in their homes', completed: false },
+        { id: generateId(), title: 'Return only essentials to the surface', completed: false },
+      ],
     },
     {
       id: generateId(),
-      title: 'Gather Dishes',
-      description: 'Collect any dishes, cups, or utensils from around the room',
+      title: 'Gather All Dishes',
+      description: 'Walk through the room and collect ALL dishes, cups, mugs, glasses, and utensils. Stack them carefully and bring them to the kitchen sink. Run hot water over them if they have dried food.',
       emoji: '🍽️',
       priority: 'medium',
       difficulty: 'quick',
       estimatedMinutes: 5,
       completed: false,
-      tips: ['Use a tray or basket to carry everything at once'],
+      tips: [
+        'Use a tray or large bowl to carry multiple items at once',
+        'Check nightstands, desks, and coffee tables',
+        "Don't wash them now - just gather and stack by the sink",
+      ],
+      subtasks: [
+        { id: generateId(), title: 'Check all surfaces for dishes and cups', completed: false },
+        { id: generateId(), title: 'Stack dishes carefully', completed: false },
+        { id: generateId(), title: 'Bring everything to the kitchen sink', completed: false },
+      ],
     },
     {
       id: generateId(),
-      title: 'Pick Up Clothes',
-      description: 'Gather any clothing items and put in hamper or fold/hang',
+      title: 'Collect Clothes Into 3 Piles',
+      description: 'Gather all clothing items from the floor, chairs, and bed. Sort into three piles: (1) Clean - can be worn again, put away or on a chair, (2) Dirty - goes in the hamper, (3) Donate - doesn\'t fit or never wear, put in a bag.',
       emoji: '👕',
       priority: 'medium',
       difficulty: 'medium',
       estimatedMinutes: 10,
       completed: false,
-      tips: ["Don't fold now - just gather!", 'Make a laundry pile for later'],
+      tips: [
+        "Don't fold anything now - just sort into piles!",
+        'The sniff test works: if it smells fine and has no stains, it\'s clean',
+        "Be honest about donate pile - if you haven't worn it in 6 months...",
+      ],
+      subtasks: [
+        { id: generateId(), title: 'Gather all clothes from floor and furniture', completed: false },
+        { id: generateId(), title: 'Create 3 piles: clean, dirty, donate', completed: false },
+        { id: generateId(), title: 'Put dirty clothes in hamper', completed: false },
+        { id: generateId(), title: 'Hang or fold clean clothes', completed: false },
+        { id: generateId(), title: 'Bag up donate pile', completed: false },
+      ],
+    },
+    {
+      id: generateId(),
+      title: 'Make the Bed',
+      description: 'A made bed makes the whole room look 50% cleaner instantly! Pull up the sheets, straighten the blanket, fluff and arrange pillows. Keep it simple - it doesn\'t have to be hotel-perfect.',
+      emoji: '🛏️',
+      priority: 'medium',
+      difficulty: 'quick',
+      estimatedMinutes: 3,
+      completed: false,
+      tips: [
+        'Stand on one side and do the whole bed from there',
+        'Good enough is good enough - no need for hospital corners',
+        'This one task makes the biggest visual impact',
+      ],
+      subtasks: [
+        { id: generateId(), title: 'Straighten the fitted sheet', completed: false },
+        { id: generateId(), title: 'Pull up the top sheet and blanket', completed: false },
+        { id: generateId(), title: 'Arrange pillows at the head', completed: false },
+      ],
     },
   ];
 }

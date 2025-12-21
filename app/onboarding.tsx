@@ -1,6 +1,6 @@
 /**
  * Declutterly - Onboarding Screen
- * Welcome flow for new users with mascot selection
+ * Welcome flow with guest mode, sign-in options, and mascot selection
  */
 
 import { Colors } from '@/constants/Colors';
@@ -32,6 +32,8 @@ import {
   Pressable,
   Text as RNText,
   ScrollView,
+  Alert,
+  Linking,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { MASCOT_PERSONALITIES, MascotPersonality } from '@/types/declutter';
@@ -43,30 +45,30 @@ const slides = [
   {
     title: 'Welcome to Declutterly',
     subtitle: 'Your AI-powered cleaning companion',
-    description: 'Take control of your space with small, achievable steps. Perfect for busy minds!',
+    description: 'Take control of your space with small, achievable steps. Perfect for busy minds and anyone who wants a calmer home.',
     emoji: '✨',
   },
   {
-    title: 'Snap a Photo',
+    title: 'Snap a Photo or Video',
     subtitle: 'Show us your space',
-    description: 'Take a picture of any room or area that needs attention. No judgment here!',
+    description: 'Take a picture or video of any room that needs attention. Our AI analyzes it and creates a personalized plan.',
     emoji: '📸',
   },
   {
-    title: 'Get Your Plan',
-    subtitle: 'AI breaks it down',
-    description: 'Our AI creates a personalized task list with small, manageable steps and time estimates.',
+    title: 'Get Your Cleaning Plan',
+    subtitle: 'AI breaks it down for you',
+    description: 'Receive step-by-step tasks with clear instructions, time estimates, and "Quick Wins" you can do in 2 minutes.',
     emoji: '📋',
   },
   {
-    title: 'Collect & Achieve',
-    subtitle: 'Make it fun!',
-    description: 'Earn XP, collect virtual items, and watch your mascot cheer you on as you clean!',
+    title: 'Track & Celebrate',
+    subtitle: 'Make cleaning fun!',
+    description: 'Earn XP, collect virtual rewards, level up your mascot, and watch your space transform!',
     emoji: '🎮',
   },
 ];
 
-type SetupStep = 'info' | 'mascot' | 'ready';
+type OnboardingStep = 'welcome' | 'auth' | 'info' | 'mascot' | 'ready';
 
 export default function OnboardingScreen() {
   const rawColorScheme = useColorScheme();
@@ -75,40 +77,66 @@ export default function OnboardingScreen() {
   const { setUser, completeOnboarding, createMascot } = useDeclutter();
 
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [step, setStep] = useState<OnboardingStep>('welcome');
   const [name, setName] = useState('');
   const [apiKey, setApiKey] = useState('');
-  const [showSetup, setShowSetup] = useState(false);
-  const [setupStep, setSetupStep] = useState<SetupStep>('info');
   const [mascotName, setMascotName] = useState('');
   const [selectedPersonality, setSelectedPersonality] = useState<MascotPersonality | null>(null);
+  const [isGuest, setIsGuest] = useState(false);
 
   const handleNext = () => {
     if (currentSlide < slides.length - 1) {
       setCurrentSlide(currentSlide + 1);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } else {
-      setShowSetup(true);
+      setStep('auth');
     }
   };
 
+  const handleGuestMode = () => {
+    setIsGuest(true);
+    setName('Guest');
+    setStep('info');
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  };
+
+  const handleSignInPlaceholder = (provider: 'google' | 'apple' | 'email') => {
+    // Placeholder for future authentication
+    Alert.alert(
+      'Coming Soon',
+      `${provider === 'google' ? 'Google' : provider === 'apple' ? 'Apple' : 'Email'} sign-in will be available when Firebase is configured. For now, continue as a guest or enter your name to get started!`,
+      [
+        { text: 'Continue as Guest', onPress: handleGuestMode },
+        { text: 'Enter Name', onPress: () => setStep('info') },
+      ]
+    );
+  };
+
   const handleInfoNext = async () => {
-    if (!name.trim()) return;
+    if (!name.trim()) {
+      Alert.alert('Name Required', 'Please enter your name to personalize your experience.');
+      return;
+    }
 
     // Save API key if provided
     if (apiKey.trim()) {
       await saveApiKey(apiKey.trim());
     }
 
-    setSetupStep('mascot');
+    setStep('mascot');
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
   const handleMascotNext = () => {
-    if (!selectedPersonality || !mascotName.trim()) return;
+    if (!selectedPersonality) {
+      Alert.alert('Choose a Buddy', 'Select a mascot personality to continue.');
+      return;
+    }
 
-    // Create mascot
-    createMascot(mascotName.trim(), selectedPersonality);
+    const finalMascotName = mascotName.trim() || MASCOT_PERSONALITIES[selectedPersonality].name;
+    createMascot(finalMascotName, selectedPersonality);
 
-    setSetupStep('ready');
+    setStep('ready');
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
@@ -116,7 +144,7 @@ export default function OnboardingScreen() {
     // Create user profile
     setUser({
       id: `user-${Date.now()}`,
-      name: name.trim(),
+      name: name.trim() || 'Guest',
       createdAt: new Date(),
       onboardingComplete: true,
     });
@@ -126,33 +154,149 @@ export default function OnboardingScreen() {
   };
 
   const handleSkipMascot = () => {
-    setSetupStep('ready');
+    // Create default mascot
+    createMascot('Buddy', 'spark');
+    setStep('ready');
   };
 
+  // Auth Selection Step
+  if (step === 'auth') {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <ScrollView contentContainerStyle={styles.authContainer}>
+          <View style={styles.authHeader}>
+            <RNText style={styles.authEmoji}>🏠</RNText>
+            <RNText style={[styles.authTitle, { color: colors.text }]}>
+              Get Started
+            </RNText>
+            <RNText style={[styles.authSubtitle, { color: colors.textSecondary }]}>
+              Sign in to sync across devices, or continue as a guest
+            </RNText>
+          </View>
+
+          {/* Auth Options */}
+          <View style={styles.authOptions}>
+            {/* Guest Mode - Primary */}
+            <Pressable
+              style={[styles.authButton, styles.guestButton, { borderColor: colors.primary }]}
+              onPress={handleGuestMode}
+            >
+              <RNText style={styles.authButtonEmoji}>👤</RNText>
+              <View style={styles.authButtonContent}>
+                <RNText style={[styles.authButtonTitle, { color: colors.text }]}>
+                  Continue as Guest
+                </RNText>
+                <RNText style={[styles.authButtonDesc, { color: colors.textSecondary }]}>
+                  Start immediately, data saved locally
+                </RNText>
+              </View>
+              <RNText style={[styles.authArrow, { color: colors.primary }]}>→</RNText>
+            </Pressable>
+
+            <View style={styles.divider}>
+              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+              <RNText style={[styles.dividerText, { color: colors.textSecondary }]}>
+                or sign in
+              </RNText>
+              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+            </View>
+
+            {/* Google Sign In */}
+            <Pressable
+              style={[styles.authButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+              onPress={() => handleSignInPlaceholder('google')}
+            >
+              <RNText style={styles.authButtonEmoji}>🔵</RNText>
+              <View style={styles.authButtonContent}>
+                <RNText style={[styles.authButtonTitle, { color: colors.text }]}>
+                  Continue with Google
+                </RNText>
+              </View>
+            </Pressable>
+
+            {/* Apple Sign In */}
+            <Pressable
+              style={[styles.authButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+              onPress={() => handleSignInPlaceholder('apple')}
+            >
+              <RNText style={styles.authButtonEmoji}>🍎</RNText>
+              <View style={styles.authButtonContent}>
+                <RNText style={[styles.authButtonTitle, { color: colors.text }]}>
+                  Continue with Apple
+                </RNText>
+              </View>
+            </Pressable>
+
+            {/* Email Sign In */}
+            <Pressable
+              style={[styles.authButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+              onPress={() => handleSignInPlaceholder('email')}
+            >
+              <RNText style={styles.authButtonEmoji}>📧</RNText>
+              <View style={styles.authButtonContent}>
+                <RNText style={[styles.authButtonTitle, { color: colors.text }]}>
+                  Sign in with Email
+                </RNText>
+              </View>
+            </Pressable>
+          </View>
+
+          {/* Privacy Note */}
+          <View style={styles.privacyNote}>
+            <RNText style={[styles.privacyText, { color: colors.textSecondary }]}>
+              By continuing, you agree to our Terms of Service and Privacy Policy.
+              Your data is stored securely and never shared.
+            </RNText>
+          </View>
+
+          {/* Back Button */}
+          <Pressable onPress={() => setStep('welcome')} style={styles.backLink}>
+            <RNText style={[styles.backLinkText, { color: colors.primary }]}>
+              ← Back to intro
+            </RNText>
+          </Pressable>
+        </ScrollView>
+      </View>
+    );
+  }
+
   // Setup Step: User Info
-  if (showSetup && setupStep === 'info') {
+  if (step === 'info') {
     return (
       <Host style={styles.container}>
         <Form>
           <Section title="">
             <VStack spacing={24} alignment="center">
               <Text size={60}>👋</Text>
-              <Text size={28} weight="bold">Let's Get Started!</Text>
+              <Text size={28} weight="bold">
+                {isGuest ? "Quick Setup" : "Let's Get Started!"}
+              </Text>
               <Text
                 size={16}
                 modifiers={[foregroundStyle(colors.textSecondary)]}
               >
-                Tell us your name to personalize your experience
+                {isGuest
+                  ? "You can add a name later. Let's keep it simple!"
+                  : "Tell us your name to personalize your experience"
+                }
               </Text>
             </VStack>
           </Section>
 
-          <Section title="Your Info">
+          <Section title="Your Name">
             <TextField
               placeholder="What should we call you?"
-              defaultValue={name}
+              defaultValue={isGuest ? '' : name}
               onChangeText={setName}
             />
+            {isGuest && (
+              <Text
+                size={13}
+                modifiers={[foregroundStyle(colors.textSecondary)]}
+              >
+                Optional - you can skip and use "Guest"
+              </Text>
+            )}
           </Section>
 
           <Section title="AI Setup (Optional)">
@@ -161,18 +305,25 @@ export default function OnboardingScreen() {
               defaultValue={apiKey}
               onChangeText={setApiKey}
             />
-            <Text
-              size={13}
-              modifiers={[foregroundStyle(colors.textSecondary)]}
-            >
-              Get a free API key at ai.google.dev
-            </Text>
+            <VStack spacing={8}>
+              <Text
+                size={13}
+                modifiers={[foregroundStyle(colors.textSecondary)]}
+              >
+                The AI analyzes your photos and creates personalized cleaning tasks.
+              </Text>
+              <Button
+                label="Get Free API Key →"
+                onPress={() => Linking.openURL('https://ai.google.dev/')}
+                modifiers={[buttonStyle('plain'), controlSize('small')]}
+              />
+            </VStack>
           </Section>
 
           <Section title="">
             <VStack spacing={12}>
               <Button
-                label="Next: Meet Your Buddy!"
+                label="Next: Choose Your Buddy!"
                 onPress={handleInfoNext}
                 modifiers={[
                   buttonStyle('borderedProminent'),
@@ -180,13 +331,15 @@ export default function OnboardingScreen() {
                   frame({ maxWidth: 400 }),
                 ]}
               />
-              {!name.trim() && (
-                <Text
-                  size={13}
-                  modifiers={[foregroundStyle(colors.warning)]}
-                >
-                  Please enter your name to continue
-                </Text>
+              {isGuest && (
+                <Button
+                  label="Skip - Just call me Guest"
+                  onPress={() => {
+                    setName('Guest');
+                    handleInfoNext();
+                  }}
+                  modifiers={[buttonStyle('plain')]}
+                />
               )}
             </VStack>
           </Section>
@@ -196,7 +349,7 @@ export default function OnboardingScreen() {
   }
 
   // Setup Step: Mascot Selection
-  if (showSetup && setupStep === 'mascot') {
+  if (step === 'mascot') {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <ScrollView contentContainerStyle={styles.mascotContainer}>
@@ -306,7 +459,7 @@ export default function OnboardingScreen() {
   }
 
   // Setup Step: Ready to Go
-  if (showSetup && setupStep === 'ready') {
+  if (step === 'ready') {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.readyContainer}>
@@ -466,6 +619,95 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
   },
+  // Auth Screen Styles
+  authContainer: {
+    paddingHorizontal: 24,
+    paddingTop: 80,
+    paddingBottom: 40,
+  },
+  authHeader: {
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  authEmoji: {
+    fontSize: 64,
+    marginBottom: 16,
+  },
+  authTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  authSubtitle: {
+    fontSize: 16,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  authOptions: {
+    gap: 12,
+    marginBottom: 32,
+  },
+  authButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1.5,
+  },
+  guestButton: {
+    backgroundColor: 'rgba(99, 102, 241, 0.08)',
+    borderWidth: 2,
+  },
+  authButtonEmoji: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  authButtonContent: {
+    flex: 1,
+  },
+  authButtonTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  authButtonDesc: {
+    fontSize: 13,
+    marginTop: 2,
+  },
+  authArrow: {
+    fontSize: 20,
+    fontWeight: '600',
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 8,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+  },
+  dividerText: {
+    fontSize: 13,
+    marginHorizontal: 16,
+  },
+  privacyNote: {
+    paddingHorizontal: 16,
+    marginBottom: 24,
+  },
+  privacyText: {
+    fontSize: 12,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  backLink: {
+    alignItems: 'center',
+    padding: 12,
+  },
+  backLinkText: {
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  // Mascot Screen Styles
   mascotContainer: {
     paddingHorizontal: 20,
     paddingTop: 60,
