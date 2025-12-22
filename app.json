@@ -1,25 +1,30 @@
 {
   "expo": {
-    "name": "UI Playground",
-    "slug": "expo-ui-playground",
+    "name": "Declutterly",
+    "slug": "declutterly",
     "version": "1.0.0",
     "orientation": "portrait",
-    "scheme": "expouiplayground",
+    "scheme": "declutterly",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.betoatexpo.expo-ui-playground",
+      "bundleIdentifier": "com.declutterly.app",
       "appleTeamId": "T2A8YY9YDW",
-      "icon": "./assets/icon.icon"
+      "icon": "./assets/icon.icon",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Declutterly needs camera access to capture photos of your spaces for AI analysis",
+        "NSPhotoLibraryUsageDescription": "Declutterly needs photo library access to save and load room photos"
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#6366F1"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.betoatexpo.expouiplayground"
+      "package": "com.declutterly.app",
+      "permissions": ["CAMERA", "READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE"]
     },
     "web": {
       "bundler": "metro",
@@ -34,13 +39,20 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#6366F1"
         }
       ],
       "expo-font",
       "expo-web-browser",
       "expo-video",
-      "expo-image"
+      "expo-image",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Declutterly to access your camera to capture room photos for AI analysis"
+        }
+      ],
+      "expo-media-library"
     ],
     "experiments": {
       "typedRoutes": true
