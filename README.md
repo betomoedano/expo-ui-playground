@@ -4,7 +4,7 @@ An **experimental playground** for exploring and showcasing [Expo UI](https://do
 
 ## 🎥 Video Tutorial
 
-[![Expo UI Tutorial](https://img.youtube.com/vi/2wXYLWz3YEQ/0.jpg)](https://www.youtube.com/watch?v=2wXYLWz3YEQ)
+[![Expo UI Tutorial](https://img.youtube.com/vi/2wXYLWz3YEQ/0.jpg)](https://youtu.be/4j6NvCNPGtE)
 
 **[Building iOS-like UIs with Expo UI](https://www.youtube.com/watch?v=2wXYLWz3YEQ)** - A comprehensive tutorial covering Expo UI components and implementation patterns.
 
