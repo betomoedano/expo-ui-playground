@@ -6,8 +6,6 @@ An **experimental playground** for exploring and showcasing [Expo UI](https://do
 
 [![Expo UI Tutorial](https://img.youtube.com/vi/4j6NvCNPGtE/0.jpg)](https://youtu.be/4j6NvCNPGtE)
 
-**[Building iOS-like UIs with Expo UI](https://www.youtube.com/watch?v=2wXYLWz3YEQ)** - A comprehensive tutorial covering Expo UI components and implementation patterns.
-
 ## 🎯 What's Inside
 
 This playground demonstrates a complete **productivity app interface** built entirely with Expo UI Swift components, featuring:
