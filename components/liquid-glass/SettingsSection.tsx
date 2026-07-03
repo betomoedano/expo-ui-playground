@@ -1,4 +1,4 @@
-import { DisclosureGroup, Picker, Section, Switch } from "@expo/ui/swift-ui";
+import { DisclosureGroup, Picker, Section, Toggle } from "@expo/ui/swift-ui";
 import React, { use, useState } from "react";
 import { AppContext } from "./AppContext";
 import { AppState } from "./types";
@@ -15,16 +15,16 @@ export function SettingsSection() {
 
   return (
     <Section title="⚙️ App Settings">
-      <Switch
-        value={settings.notifications}
+      <Toggle
+        isOn={settings.notifications}
         label="Push Notifications"
-        onValueChange={(value) => updateSettings({ notifications: value })}
+        onIsOnChange={(value) => updateSettings({ notifications: value })}
       />
 
-      <Switch
-        value={settings.autoSave}
+      <Toggle
+        isOn={settings.autoSave}
         label="Auto-save Changes"
-        onValueChange={(value) => updateSettings({ autoSave: value })}
+        onIsOnChange={(value) => updateSettings({ autoSave: value })}
       />
 
       <DisclosureGroup

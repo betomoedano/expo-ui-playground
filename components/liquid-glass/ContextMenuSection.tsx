@@ -4,8 +4,7 @@ import {
   Host,
   HStack,
   Section,
-  Submenu,
-  Switch,
+  Toggle,
   Text,
   VStack,
 } from "@expo/ui/swift-ui";
@@ -19,38 +18,31 @@ export function ContextMenuSection() {
     AppContext
   ) as AppState;
 
-  const menuOptions = [
+  const menuOptions: any[] = [
     {
       systemImage: "info.circle",
       title: "Task Overview",
       type: "button",
     },
     {
-      title: "Filter Tasks",
-      systemImage: "line.3.horizontal.decrease.circle",
-      type: "submenu",
-      items: [
-        {
-          title: "Show All",
-          systemImage: "list.bullet",
-          type: "button",
-        },
-        {
-          title: "High Priority Only",
-          systemImage: "exclamationmark.triangle.fill",
-          type: "button",
-        },
-        {
-          title: "Due Today",
-          systemImage: "calendar.badge.clock",
-          type: "button",
-        },
-        {
-          title: "Overdue",
-          systemImage: "calendar.badge.exclamationmark",
-          type: "button",
-        },
-      ],
+      title: "Show All",
+      systemImage: "list.bullet",
+      type: "button",
+    },
+    {
+      title: "High Priority Only",
+      systemImage: "exclamationmark.triangle.fill",
+      type: "button",
+    },
+    {
+      title: "Due Today",
+      systemImage: "calendar.badge.clock",
+      type: "button",
+    },
+    {
+      title: "Overdue",
+      systemImage: "calendar.badge.exclamationmark",
+      type: "button",
     },
     {
       title: "Show Completed Tasks",
@@ -59,65 +51,44 @@ export function ContextMenuSection() {
       value: contextMenuStates["Show Completed Tasks"],
     },
     {
-      title: "View Options",
-      systemImage: "eye",
-      type: "submenu",
-      items: [
-        {
-          title: "Auto Refresh",
-          systemImage: "arrow.clockwise",
-          type: "switch",
-          value: contextMenuStates["Auto Refresh"],
-        },
-        {
-          title: "Notifications",
-          systemImage: "bell",
-          type: "switch",
-          value: contextMenuStates["Notifications"],
-        },
-        {
-          title: "Advanced Settings",
-          systemImage: "gear",
-          type: "submenu",
-          items: [
-            {
-              title: "Dark Mode",
-              systemImage: "moon.fill",
-              type: "switch",
-              value: contextMenuStates["Dark Mode"],
-            },
-            {
-              title: "Reset All Settings",
-              systemImage: "arrow.clockwise.circle",
-              type: "button",
-              destructive: true,
-            },
-            {
-              title: "Export Data",
-              systemImage: "square.and.arrow.up",
-              type: "button",
-            },
-          ],
-        },
-      ],
+      title: "Auto Refresh",
+      systemImage: "arrow.clockwise",
+      type: "switch",
+      value: contextMenuStates["Auto Refresh"],
     },
     {
-      title: "Quick Actions",
-      systemImage: "bolt",
-      type: "submenu",
-      items: [
-        {
-          title: "Mark All Complete",
-          systemImage: "checkmark.circle.fill",
-          type: "button",
-        },
-        {
-          title: "Clear Completed",
-          systemImage: "trash",
-          type: "button",
-          destructive: true,
-        },
-      ],
+      title: "Notifications",
+      systemImage: "bell",
+      type: "switch",
+      value: contextMenuStates["Notifications"],
+    },
+    {
+      title: "Dark Mode",
+      systemImage: "moon.fill",
+      type: "switch",
+      value: contextMenuStates["Dark Mode"],
+    },
+    {
+      title: "Mark All Complete",
+      systemImage: "checkmark.circle.fill",
+      type: "button",
+    },
+    {
+      title: "Clear Completed",
+      systemImage: "trash",
+      type: "button",
+      destructive: true,
+    },
+    {
+      title: "Reset All Settings",
+      systemImage: "arrow.clockwise.circle",
+      type: "button",
+      destructive: true,
+    },
+    {
+      title: "Export Data",
+      systemImage: "square.and.arrow.up",
+      type: "button",
     },
     {
       title: "Help & Support",
@@ -140,7 +111,6 @@ export function ContextMenuSection() {
             role={option.destructive ? "destructive" : undefined}
             onPress={() => {
               console.log(`Context menu action: ${option.title}`);
-              // Handle specific actions
               if (option.title === "Mark All Complete") {
                 tasks
                   .filter((t) => !t.completed)
@@ -152,29 +122,14 @@ export function ContextMenuSection() {
 
       case "switch":
         return (
-          <Switch
+          <Toggle
             key={index}
-            value={option.value}
+            isOn={option.value}
             label={option.title}
-            variant="checkbox"
-            onValueChange={(value) => {
+            onIsOnChange={(value) => {
               updateContextMenuState(option.title, value);
             }}
           />
-        );
-
-      case "submenu":
-        return (
-          <Submenu
-            key={index}
-            button={
-              <Button systemImage={option.systemImage} label={option.title} />
-            }
-          >
-            {option.items?.map((subItem: any, subIndex: number) =>
-              renderMenuOption(subItem, subIndex)
-            )}
-          </Submenu>
         );
 
       default:

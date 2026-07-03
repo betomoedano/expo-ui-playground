@@ -6,7 +6,6 @@
     "orientation": "portrait",
     "scheme": "expouiplayground",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.betoatexpo.expo-ui-playground",
@@ -18,7 +17,6 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true,
       "package": "com.betoatexpo.expouiplayground"
     },
     "web": {

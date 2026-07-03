@@ -10,8 +10,8 @@ import {
   Picker,
   Section,
   Spacer,
-  Switch,
   Text,
+  Toggle,
   VStack,
 } from "@expo/ui/swift-ui";
 import {
@@ -28,7 +28,7 @@ import {
 } from "@expo/ui/swift-ui/modifiers";
 import { Image as ExpoImage } from "expo-image";
 import { Link } from "expo-router";
-import React, { use, useState } from "react";
+import { use, useState } from "react";
 import { AppContext } from "./AppContext";
 import { AppState } from "./types";
 
@@ -89,7 +89,7 @@ export function ProfileSection() {
         />
         <Text>Airplane Mode</Text>
         <Spacer />
-        <Switch value={isAirplaneMode} onValueChange={setIsAirplaneMode} />
+        <Toggle isOn={isAirplaneMode} onIsOnChange={setIsAirplaneMode} />
       </HStack>
 
       <LabeledContent label="Bottom Sheet">

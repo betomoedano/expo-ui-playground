@@ -3,7 +3,7 @@ import {
   HStack,
   Picker,
   Section,
-  Switch,
+  Toggle,
   Text,
   VStack,
 } from "@expo/ui/swift-ui";
@@ -85,9 +85,9 @@ export function TaskManagementSection() {
                   {`Due: ${task.dueDate.toLocaleDateString()}`}
                 </Text>
               </VStack>
-              <Switch
-                value={task.completed}
-                onValueChange={() => toggleTask(task.id)}
+              <Toggle
+                isOn={task.completed}
+                onIsOnChange={() => toggleTask(task.id)}
               />
             </HStack>
           ))}
